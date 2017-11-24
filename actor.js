@@ -17,14 +17,15 @@
  * This point will then need to be temporarily blacklisted for that actor, until the next objective is completed
  * For this version of the Actor there are no chokepoints, so the Actors can be constantly moving.
  */
-class Actor {
+export class Actor {
   /**
    * Create a new basic Actor
    * @param {String}     identifier The unique identifier for this Actor 
    * @param {Integer}    priority   The priority to use in path disputes - lower value means higher importance
+   * @param {Array}      position   The coordinates of the starting position
    * @param {Simulation} simulation The Simulation to broadcast position, route, objective point to 
    */
-  constructor(identifier, priority, simulation) {
+  constructor(identifier, priority, position, simulation) {
     this.identifier = identifier;
     this.priority = priority;
     this.simulation = simulation;
@@ -32,7 +33,33 @@ class Actor {
     this.active = true;
     // Whether the Actor is carrying an item
     this._item = undefined;
-    // While active, do things
+    // The position of the Actor
+    this.position = position;
+  }
+
+  /**
+   * Returns true if the Actor is next to the element
+   * @param {String} element The element that we are looking for 
+   */
+  _isNextTo(element) {
+    // FIXME will probably crash if we check invalid indices (e.g. [-1])
+    // TODO the x and y may be the wrong way round
+    let actorX = this.position[0];
+    let actorY = this.position[1];
+    // The elements on each of the four edges
+    let edges = [
+      this.simulation.area[actorX][actorY - 1], // North
+      this.simulation.area[actorX + 1][actorY], // East
+      this.simulation.area[actorX][actorY + 1], // South
+      this.simulation.area[actorX - 1][actorY], // West
+    ];
+
+    for (let edge of edges) {
+      if (edge === element) {
+        return true;
+      }
+    }
+    return false;
   }
 
 

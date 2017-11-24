@@ -1,3 +1,5 @@
+import {Actor} from './actor';
+
 /**
  * A simulation of cooperative (Swarm) AI.
  * @version 2017-11-21
@@ -11,10 +13,39 @@ class Simulation {
   constructor(simulationConfig) {
     this.config = simulationConfig;
 
-    // 
+    this.area = this.config.simulationArea;
+    
+    // Store the actors
+    this.actors = {};
+    // Stores the current paths for each actor
+    this.paths = {};
+    // Create the Actors
     for (i = 0; i < this.config.actorCount; i++) {
-
+      let actorDetails = this.config.actorDetails[i];
+      let startingPosition = this._findPosition('A')[i];
+      let actor = new Actor(actorDetails.identifier, actorDetails.priority, startingPosition, this);
+      // Creates an entry in the actors and paths Objects with identifier as the key
+      this.actors[actorDetails.identifier] = actor;
+      this.paths[actorDetails.identifier] = [];
     }
+  }
+
+  /**
+   * Finds the position of all occurrences of the element
+   * @param {String} element The element we will search for
+   * @return {Array}         The coordinates of each element 
+   */
+  _findPosition(element) {
+    let positions = [];
+    for (let row = 0; row < simulationArea.length; row++) {
+      for (let item = 0; item < simulationArea[row].length; item++) {
+        // TODO The x and y might be the wrong way round
+        if (simulationArea[row][item] === element) {
+          positions.push([row,item]);
+        }
+      }
+    }
+    return positions;
   }
 }
 
