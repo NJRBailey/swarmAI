@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
 <html>
   <head>
     <style>
@@ -36,10 +38,10 @@
     <div id="simulation">
       <canvas id="simulation-canvas" width="800" height="600"></canvas>
       <!-- Include the simulation class -->
-      <script src="swarm_ai_simulation_basic.js"></script>
-
-      <!-- Initialise simulation -->
-      <script>
+      <script type="module" src="swarm_ai_simulation_basic.js">
+        alert('he');
+        import {Simulation} from "swarm_ai_simulation_basic.js";
+      // <!-- Initialise simulation -->
         let rules = {
           // The number of actors (bots)
           actorCount: 2,

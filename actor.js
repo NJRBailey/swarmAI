@@ -2,12 +2,12 @@
  * A basic Actor for the Simulation.
  * @version 2017-11-22
  * @author NJRBailey
- * 
+ *
  * Actors want to pick up blocks, place the block, and repeat until done, without:
  *  - Colliding with another Actor or block
  *  - Making the same section as another Actor
  *  - Barring off a section from being made (e.g. by surrounding an empty objective point with blocks) 
- * 
+ *
  * One way would be to have the bots constantly trading locations
  * I think a better way would be to use a path-finding algorithm (e.g. A*) to determine a path for each Actor to the next objective,
  * which is shared out to the other Actors, and update it if three conditions are met:
@@ -16,14 +16,15 @@
  *  3) The priority for this Actor is less than for the other Actor
  * This point will then need to be temporarily blacklisted for that actor, until the next objective is completed
  * For this version of the Actor there are no chokepoints, so the Actors can be constantly moving.
+ * Performing an action, like picking up or placing an item, takes one move.
  */
 export class Actor {
   /**
    * Create a new basic Actor
-   * @param {String}     identifier The unique identifier for this Actor 
+   * @param {String}     identifier The unique identifier for this Actor
    * @param {Integer}    priority   The priority to use in path disputes - lower value means higher importance
    * @param {Array}      position   The coordinates of the starting position
-   * @param {Simulation} simulation The Simulation to broadcast position, route, objective point to 
+   * @param {Simulation} simulation The Simulation to broadcast position, route, objective point to
    */
   constructor(identifier, priority, position, simulation) {
     this.identifier = identifier;
@@ -35,13 +36,17 @@ export class Actor {
     this._item = undefined;
     // The position of the Actor
     this.position = position;
+
+    // for testing
+    window.actors.push(this);
+    console.log('you got it');
   }
 
   /**
-   * Returns true if the Actor is next to the element
-   * @param {String} element The element that we are looking for 
+   * Returns the elements at the edge of the Actor.
+   * @return {Array} The elements at each edge.
    */
-  _isNextTo(element) {
+  _getSurroundings() {
     // FIXME will probably crash if we check invalid indices (e.g. [-1])
     // TODO the x and y may be the wrong way round
     let actorX = this.position[0];
@@ -53,13 +58,7 @@ export class Actor {
       this.simulation.area[actorX][actorY + 1], // South
       this.simulation.area[actorX - 1][actorY], // West
     ];
-
-    for (let edge of edges) {
-      if (edge === element) {
-        return true;
-      }
-    }
-    return false;
+    return edges;
   }
 
 
