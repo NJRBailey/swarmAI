@@ -1,6 +1,6 @@
 /**
  * A basic Actor for the Simulation.
- * @version 2017-11-22
+ * @version Basic
  * @author NJRBailey
  *
  * Actors want to pick up blocks, place the block, and repeat until done, without:
@@ -94,8 +94,8 @@ export class Actor {
         break;
       case 'S':
         if (this.simulation.config.groundElements.includes(edges[2])) {
-          let north = [this.position[0] + 1, this.position[1]];
-          this.simulation.swapElements(this.position, north);
+          let south = [this.position[0] + 1, this.position[1]];
+          this.simulation.swapElements(this.position, south);
           this.position = south;
         } else {
           throw new Error('Tried to move into a: ' + edges[2]);
@@ -103,13 +103,43 @@ export class Actor {
         break;
       case 'W':
         if (this.simulation.config.groundElements.includes(edges[3])) {
-          let north = [this.position[0], this.position[1] - 1];
-          this.simulation.swapElements(this.position, north);
+          let west = [this.position[0], this.position[1] - 1];
+          this.simulation.swapElements(this.position, west);
           this.position = west;
         } else {
           throw new Error('Tried to move into a: ' + edges[3]);
         }
         break;
+    }
+  }
+
+  /**
+   * Picks up the specified item if it is next to one
+   * @param {String} item An item element
+   */
+  takeItem(item) {
+    //TODO add a this.rules parameter to the contructor
+    if (this.simulation.config.itemElements.includes(item)) {
+      let edges = this._getSurroundings();
+      if (edges.includes(item)) {
+        this.item = item;
+      } else {
+        throw new Error(this.identifier + 'tried to take an item ' + item + ' that it was not next to');
+      }
+    } else {
+      throw new Error(this.identifier + 'tried to take an unspecified item ' + item);
+    }
+  }
+
+  /**
+   * Places the currently held item in the position
+   * @param {Array} position The position to place the item in
+   */
+  placeItem(position) {
+    if (this.item !== undefined) {
+      this.simulation.replaceElement(position, this.item);
+    } else {
+      throw new Error(this.identifier + ' tried to place an item while it was not holding one');
     }
   }
 

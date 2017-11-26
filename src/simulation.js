@@ -2,7 +2,13 @@ import {Actor} from './actor.js';
 
 /**
  * A simulation of cooperative (Swarm) AI.
- * @version 2017-11-21
+ * 
+ * In this version, the following rules apply:
+ * - Resources are infinite
+ * - An Actor will never be completely surrounded
+ * - An Actor can carry one item at a time
+ * 
+ * @version 1.0 Basic
  * @author NJRBailey
  */
 export class Simulation {
@@ -66,6 +72,15 @@ export class Simulation {
     let secondElement = this.area[s[0]][s[1]];
     this.area[f[0]][f[1]] = secondElement;
     this.area[s[0]][s[1]] = firstElement;
+  }
+
+  /**
+   * Replaces the element currently in the position with the new element
+   * @param {Array}  position   The position to replace an element at
+   * @param {String} newElement The element to replace with
+   */
+  replaceElement(position, newElement) {
+    this.area[position[0], position[1]] = newElement;
   }
 }
 

@@ -11,7 +11,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 /**
  * A basic Actor for the Simulation.
- * @version 2017-11-22
+ * @version Basic
  * @author NJRBailey
  *
  * Actors want to pick up blocks, place the block, and repeat until done, without:
@@ -99,6 +99,7 @@ var Actor = exports.Actor = function () {
           if (this.simulation.config.groundElements.includes(edges[0])) {
             var north = [this.position[0] - 1, this.position[1]];
             this.simulation.swapElements(this.position, north);
+            this.position = north;
           } else {
             throw new Error('Tried to move into a: ' + edges[0]);
           }
@@ -107,26 +108,65 @@ var Actor = exports.Actor = function () {
           if (this.simulation.config.groundElements.includes(edges[1])) {
             var east = [this.position[0], this.position[1] + 1];
             this.simulation.swapElements(this.position, east);
+            this.position = east;
           } else {
             throw new Error('Tried to move into a: ' + edges[1]);
           }
           break;
         case 'S':
           if (this.simulation.config.groundElements.includes(edges[2])) {
-            var _north = [this.position[0] + 1, this.position[1]];
-            this.simulation.swapElements(this.position, _north);
+            var south = [this.position[0] + 1, this.position[1]];
+            this.simulation.swapElements(this.position, south);
+            this.position = south;
           } else {
             throw new Error('Tried to move into a: ' + edges[2]);
           }
           break;
         case 'W':
           if (this.simulation.config.groundElements.includes(edges[3])) {
-            var _north2 = [this.position[0], this.position[1] - 1];
-            this.simulation.swapElements(this.position, _north2);
+            var west = [this.position[0], this.position[1] - 1];
+            this.simulation.swapElements(this.position, west);
+            this.position = west;
           } else {
             throw new Error('Tried to move into a: ' + edges[3]);
           }
           break;
+      }
+    }
+
+    /**
+     * Picks up the specified item if it is next to one
+     * @param {String} item An item element
+     */
+
+  }, {
+    key: 'takeItem',
+    value: function takeItem(item) {
+      //TODO add a this.rules parameter to the contructor
+      if (this.simulation.config.itemElements.includes(item)) {
+        var edges = this._getSurroundings();
+        if (edges.includes(item)) {
+          this.item = item;
+        } else {
+          throw new Error(this.identifier + 'tried to take an item ' + item + ' that it was not next to');
+        }
+      } else {
+        throw new Error(this.identifier + 'tried to take an unspecified item ' + item);
+      }
+    }
+
+    /**
+     * Places the currently held item in the position
+     * @param {Array} position The position to place the item in
+     */
+
+  }, {
+    key: 'placeItem',
+    value: function placeItem(position) {
+      if (this.item !== undefined) {
+        this.simulation.replaceElement(position, this.item);
+      } else {
+        throw new Error(this.identifier + ' tried to place an item while it was not holding one');
       }
     }
   }]);
