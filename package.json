@@ -15,7 +15,7 @@
     "start": "babel-node src/index.js",
     "build": "babel src/ -d build/",
     "production": "node build/index.js",
-    "browserify": "browserify src/simulation.js -o static/simulation.js -t [ babelify ] && browserify src/actor.js -o static/actor.js -t [ babelify ] && replace static\\index.html src\\index.html",
+    "browserify": "browserify src/simulation.js -o static/simulation.js -t [ babelify ] && browserify src/actor.js -o static/actor.js -t [ babelify ] && browserify src/loader.js -o static/loader.js -t [ babelify ]",
     "test": "test"
   },
   "repository": {

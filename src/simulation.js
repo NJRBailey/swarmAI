@@ -23,7 +23,7 @@ export class Simulation {
     // Stores the current paths for each actor
     this.paths = {};
     // Create the Actors
-    for (i = 0; i < this.config.actorCount; i++) {
+    for (let i = 0; i < this.config.actorCount; i++) {
       let actorDetails = this.config.actorDetails[i];
       let startingPosition = this._findPosition('A')[i];
       let actor = new Actor(actorDetails.identifier, actorDetails.priority, startingPosition, this);
