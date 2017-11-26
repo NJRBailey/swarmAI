@@ -1,4 +1,4 @@
-import {Actor} from './actor';
+import {Actor} from './actor.js';
 
 /**
  * A simulation of cooperative (Swarm) AI.
