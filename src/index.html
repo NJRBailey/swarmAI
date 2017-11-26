@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+  <head>
+    <style>
+      #header {
+        width: 100%;
+        height: auto;
+        border-bottom: 3px solid #222222;
+        padding-bottom: 3px;
+        margin-bottom: 5px;
+      }
+      #title {
+        font-size: 20px;
+      }
+      #subtitle {
+        font-size: 12px;
+      }
+      #credits {
+        font-size: 12px;
+        float: right;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header id="header">
+      <span id="title">Swarm AI</span>
+      <span id="subtitle">Basic</span>
+
+      <span id="credits">
+        <a href="">NJRBailey</a>
+        <br>
+        2017-11-21
+      </span>
+    </header>
+
+    <div id="simulation">
+      <canvas id="simulation-canvas" width="800" height="600"></canvas>
+      <!-- Include the simulation class -->
+      <script src="static/swarm_ai_simulation_basic.js">
+      // <!-- Initialise simulation -->
+        var rules = {
+          // The number of actors (bots)
+          actorCount: 2,
+          // The details for those actors
+          actorDetails: [
+            {
+              identifier: 'boss',
+              priority: 0,
+            },
+            {
+              identifier: 'newkid',
+              priority: 1,
+            },
+          ],
+          // The area in which the simulation will take place - / = Solid, _ = Ground, Actor spawn, Material spawn, Objective
+          simulationArea: [
+            ['/','/','/','/','/','/','/','/'],
+            ['/','A','_','_','_','_','_','/'],
+            ['/','A','_','_','O','O','_','/'],
+            ['/','_','_','_','O','O','_','/'],
+            ['/','M','_','_','_','_','_','/'],
+            ['/','/','/','/','/','/','/','/']
+          ],
+          // The zero-based coordinates to insert the shape at
+          objectiveTopLeft: [2,2],
+        };
+
+        var simulation = new Simulation(rules);
+      </script>
+    </div>
+  </body>
+</html>
