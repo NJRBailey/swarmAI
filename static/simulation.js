@@ -52,7 +52,6 @@ var Actor = exports.Actor = function () {
 
     // for testing
     window.actors.push(this);
-    console.log('you got it');
   }
 
   /**
@@ -65,15 +64,70 @@ var Actor = exports.Actor = function () {
     key: '_getSurroundings',
     value: function _getSurroundings() {
       // FIXME will probably crash if we check invalid indices (e.g. [-1])
-      // TODO the x and y may be the wrong way round
-      var actorX = this.position[0];
-      var actorY = this.position[1];
+      var actorRow = this.position[0];
+      var actorColumn = this.position[1];
       // The elements on each of the four edges
-      var edges = [this.simulation.area[actorX][actorY - 1], // North
-      this.simulation.area[actorX + 1][actorY], // East
-      this.simulation.area[actorX][actorY + 1], // South
-      this.simulation.area[actorX - 1][actorY]];
+      var edges = [this.simulation.area[actorRow - 1][actorColumn], // North
+      this.simulation.area[actorRow][actorColumn + 1], // East
+      this.simulation.area[actorRow + 1][actorColumn], // South
+      this.simulation.area[actorRow][actorColumn - 1]];
       return edges;
+    }
+
+    /**
+     * Returns the current row and column of this Actor
+     * @return {Array} The actor's row and column
+     */
+
+  }, {
+    key: 'getPosition',
+    value: function getPosition() {
+      return this.position;
+    }
+
+    /**
+     * Moves one position in the specified direction, if allowed.
+     * @param {String} direction The direction to move in | N,E,S,W
+     */
+
+  }, {
+    key: 'move',
+    value: function move(direction) {
+      var edges = this._getSurroundings();
+      switch (direction) {
+        case 'N':
+          if (this.simulation.config.groundElements.includes(edges[0])) {
+            var north = [this.position[0] - 1, this.position[1]];
+            this.simulation.swapElements(this.position, north);
+          } else {
+            throw new Error('Tried to move into a: ' + edges[0]);
+          }
+          break;
+        case 'E':
+          if (this.simulation.config.groundElements.includes(edges[1])) {
+            var east = [this.position[0], this.position[1] + 1];
+            this.simulation.swapElements(this.position, east);
+          } else {
+            throw new Error('Tried to move into a: ' + edges[1]);
+          }
+          break;
+        case 'S':
+          if (this.simulation.config.groundElements.includes(edges[2])) {
+            var _north = [this.position[0] + 1, this.position[1]];
+            this.simulation.swapElements(this.position, _north);
+          } else {
+            throw new Error('Tried to move into a: ' + edges[2]);
+          }
+          break;
+        case 'W':
+          if (this.simulation.config.groundElements.includes(edges[3])) {
+            var _north2 = [this.position[0], this.position[1] - 1];
+            this.simulation.swapElements(this.position, _north2);
+          } else {
+            throw new Error('Tried to move into a: ' + edges[3]);
+          }
+          break;
+      }
     }
   }]);
 
@@ -107,9 +161,9 @@ var Simulation = exports.Simulation = function () {
   function Simulation(simulationConfig) {
     _classCallCheck(this, Simulation);
 
-    alert('hello');
     // for testing
     window.actors = [];
+
     this.config = simulationConfig;
 
     this.area = this.config.simulationArea;
@@ -119,9 +173,10 @@ var Simulation = exports.Simulation = function () {
     // Stores the current paths for each actor
     this.paths = {};
     // Create the Actors
-    for (i = 0; i < this.config.actorCount; i++) {
+    var actorPositions = this._findPosition('A');
+    for (var i = 0; i < this.config.actorCount; i++) {
       var actorDetails = this.config.actorDetails[i];
-      var startingPosition = this._findPosition('A')[i];
+      var startingPosition = actorPositions[i];
       var actor = new _actor.Actor(actorDetails.identifier, actorDetails.priority, startingPosition, this);
       // Creates an entry in the actors and paths Objects with identifier as the key
       this.actors[actorDetails.identifier] = actor;
@@ -139,16 +194,35 @@ var Simulation = exports.Simulation = function () {
   _createClass(Simulation, [{
     key: '_findPosition',
     value: function _findPosition(element) {
+      var simulationArea = this.config.simulationArea;
       var positions = [];
       for (var row = 0; row < simulationArea.length; row++) {
-        for (var item = 0; item < simulationArea[row].length; item++) {
+        for (var column = 0; column < simulationArea[row].length; column++) {
           // TODO The x and y might be the wrong way round
-          if (simulationArea[row][item] === element) {
-            positions.push([row, item]);
+          if (simulationArea[row][column] === element) {
+            positions.push([row, column]);
           }
         }
       }
+      console.log(positions);
       return positions;
+    }
+
+    /**
+     * Switches the elements in the specified positions
+     * @param {Array} firstPosition  The first position to swap
+     * @param {Array} secondPosition The second position to swap
+     */
+
+  }, {
+    key: 'swapElements',
+    value: function swapElements(firstPosition, secondPosition) {
+      var f = firstPosition;
+      var s = secondPosition;
+      var firstElement = this.area[f[0]][f[1]];
+      var secondElement = this.area[s[0]][s[1]];
+      this.area[f[0]][f[1]] = secondElement;
+      this.area[s[0]][s[1]] = firstElement;
     }
   }]);
 

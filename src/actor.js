@@ -39,7 +39,6 @@ export class Actor {
 
     // for testing
     window.actors.push(this);
-    console.log('you got it');
   }
 
   /**
@@ -48,18 +47,70 @@ export class Actor {
    */
   _getSurroundings() {
     // FIXME will probably crash if we check invalid indices (e.g. [-1])
-    // TODO the x and y may be the wrong way round
-    let actorX = this.position[0];
-    let actorY = this.position[1];
+    let actorRow = this.position[0];
+    let actorColumn = this.position[1];
     // The elements on each of the four edges
     let edges = [
-      this.simulation.area[actorX][actorY - 1], // North
-      this.simulation.area[actorX + 1][actorY], // East
-      this.simulation.area[actorX][actorY + 1], // South
-      this.simulation.area[actorX - 1][actorY], // West
+      this.simulation.area[actorRow - 1][actorColumn], // North
+      this.simulation.area[actorRow][actorColumn + 1], // East
+      this.simulation.area[actorRow + 1][actorColumn], // South
+      this.simulation.area[actorRow][actorColumn - 1], // West
     ];
     return edges;
   }
 
+  /**
+   * Returns the current row and column of this Actor
+   * @return {Array} The actor's row and column
+   */
+  getPosition() {
+    return this.position;
+  }
+
+  /**
+   * Moves one position in the specified direction, if allowed.
+   * @param {String} direction The direction to move in | N,E,S,W
+   */
+  move(direction) {
+    let edges = this._getSurroundings();
+    switch (direction) {
+      case 'N':
+        if (this.simulation.config.groundElements.includes(edges[0])) {
+          let north = [this.position[0] - 1, this.position[1]];
+          this.simulation.swapElements(this.position, north);
+          this.position = north;
+        } else {
+          throw new Error('Tried to move into a: ' + edges[0]);
+        }
+        break;
+      case 'E':
+        if (this.simulation.config.groundElements.includes(edges[1])) {
+          let east = [this.position[0], this.position[1] + 1];
+          this.simulation.swapElements(this.position, east);
+          this.position = east;
+        } else {
+          throw new Error('Tried to move into a: ' + edges[1]);
+        }
+        break;
+      case 'S':
+        if (this.simulation.config.groundElements.includes(edges[2])) {
+          let north = [this.position[0] + 1, this.position[1]];
+          this.simulation.swapElements(this.position, north);
+          this.position = south;
+        } else {
+          throw new Error('Tried to move into a: ' + edges[2]);
+        }
+        break;
+      case 'W':
+        if (this.simulation.config.groundElements.includes(edges[3])) {
+          let north = [this.position[0], this.position[1] - 1];
+          this.simulation.swapElements(this.position, north);
+          this.position = west;
+        } else {
+          throw new Error('Tried to move into a: ' + edges[3]);
+        }
+        break;
+    }
+  }
 
 }

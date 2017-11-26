@@ -20,11 +20,15 @@ let rules = {
     ['/','A','_','_','_','_','_','/'],
     ['/','A','_','_','O','O','_','/'],
     ['/','_','_','_','O','O','_','/'],
-    ['/','M','_','_','_','_','_','/'],
+    ['/','B','_','_','_','_','_','/'],
     ['/','/','/','/','/','/','/','/']
   ],
-  // The zero-based coordinates to insert the shape at
-  objectiveTopLeft: [2,2],
+  // The elements Actors are allowed to move onto
+  groundElements: ['_'],
+  // The elements Actors can pick up
+  itemElements: ['B'],
+  // The elements Actors try to build
+  objectiveElements: ['O'],
 };
 
 let simulation = new Simulation(rules);

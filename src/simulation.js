@@ -11,9 +11,9 @@ export class Simulation {
    * @param {Object} simulationConfig General setup options.
    */
   constructor(simulationConfig) {
-    alert('hello');
     // for testing
     window.actors = [];
+
     this.config = simulationConfig;
 
     this.area = this.config.simulationArea;
@@ -23,9 +23,10 @@ export class Simulation {
     // Stores the current paths for each actor
     this.paths = {};
     // Create the Actors
+    let actorPositions = this._findPosition('A');
     for (let i = 0; i < this.config.actorCount; i++) {
       let actorDetails = this.config.actorDetails[i];
-      let startingPosition = this._findPosition('A')[i];
+      let startingPosition = actorPositions[i];
       let actor = new Actor(actorDetails.identifier, actorDetails.priority, startingPosition, this);
       // Creates an entry in the actors and paths Objects with identifier as the key
       this.actors[actorDetails.identifier] = actor;
@@ -39,16 +40,32 @@ export class Simulation {
    * @return {Array}         The coordinates of each element
    */
   _findPosition(element) {
+    let simulationArea = this.config.simulationArea;
     let positions = [];
     for (let row = 0; row < simulationArea.length; row++) {
-      for (let item = 0; item < simulationArea[row].length; item++) {
+      for (let column = 0; column < simulationArea[row].length; column++) {
         // TODO The x and y might be the wrong way round
-        if (simulationArea[row][item] === element) {
-          positions.push([row,item]);
+        if (simulationArea[row][column] === element) {
+          positions.push([row,column]);
         }
       }
     }
+    console.log(positions);
     return positions;
+  }
+
+  /**
+   * Switches the elements in the specified positions
+   * @param {Array} firstPosition  The first position to swap
+   * @param {Array} secondPosition The second position to swap
+   */
+  swapElements(firstPosition, secondPosition) {
+    let f = firstPosition;
+    let s = secondPosition;
+    let firstElement = this.area[f[0]][f[1]];
+    let secondElement = this.area[s[0]][s[1]];
+    this.area[f[0]][f[1]] = secondElement;
+    this.area[s[0]][s[1]] = firstElement;
   }
 }
 
