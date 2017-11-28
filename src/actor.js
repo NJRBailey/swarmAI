@@ -21,21 +21,23 @@
 export class Actor {
   /**
    * Create a new basic Actor
+   * @param {Object}     config      The config settings for Actors
    * @param {String}     identifier The unique identifier for this Actor
    * @param {Integer}    priority   The priority to use in path disputes - lower value means higher importance
    * @param {Array}      position   The coordinates of the starting position
    * @param {Simulation} simulation The Simulation to broadcast position, route, objective point to
    */
-  constructor(identifier, priority, position, simulation) {
-    this.identifier = identifier;
-    this.priority = priority;
+  constructor(config, simulation) {
+    this.config = config;
+    this.identifier = config.identifier;
+    this.priority = config.priority;
     this.simulation = simulation;
     // Whether the Actor should be performing tasks
     this.active = true;
     // Whether the Actor is carrying an item
     this._item = undefined;
     // The position of the Actor
-    this.position = position;
+    this.position = config.startingPosition;
 
     // for testing
     window.actors.push(this);
@@ -75,7 +77,7 @@ export class Actor {
     let edges = this._getSurroundings();
     switch (direction) {
       case 'N':
-        if (this.simulation.config.groundElements.includes(edges[0])) {
+        if (this.config.ground.includes(edges[0])) {
           let north = [this.position[0] - 1, this.position[1]];
           this.simulation.swapElements(this.position, north);
           this.position = north;
@@ -84,7 +86,7 @@ export class Actor {
         }
         break;
       case 'E':
-        if (this.simulation.config.groundElements.includes(edges[1])) {
+        if (this.config.ground.includes(edges[1])) {
           let east = [this.position[0], this.position[1] + 1];
           this.simulation.swapElements(this.position, east);
           this.position = east;
@@ -93,7 +95,7 @@ export class Actor {
         }
         break;
       case 'S':
-        if (this.simulation.config.groundElements.includes(edges[2])) {
+        if (this.config.ground.includes(edges[2])) {
           let south = [this.position[0] + 1, this.position[1]];
           this.simulation.swapElements(this.position, south);
           this.position = south;
@@ -102,7 +104,7 @@ export class Actor {
         }
         break;
       case 'W':
-        if (this.simulation.config.groundElements.includes(edges[3])) {
+        if (this.config.ground.includes(edges[3])) {
           let west = [this.position[0], this.position[1] - 1];
           this.simulation.swapElements(this.position, west);
           this.position = west;
@@ -118,16 +120,16 @@ export class Actor {
    * @param {String} item An item element
    */
   takeItem(item) {
-    //TODO add a this.rules parameter to the contructor
-    if (this.simulation.config.itemElements.includes(item)) {
+    if (this.config.items.includes(item)) {
       let edges = this._getSurroundings();
       if (edges.includes(item)) {
-        this.item = item;
+        // Lower case indicates an item, rather than a spawner
+        this.item = item.toLowerCase();
       } else {
-        throw new Error(this.identifier + 'tried to take an item ' + item + ' that it was not next to');
+        throw new Error(this.identifier + ' tried to take an item: ' + item + ' that it was not next to');
       }
     } else {
-      throw new Error(this.identifier + 'tried to take an unspecified item ' + item);
+      throw new Error(this.identifier +  'tried to take an unspecified item: ' + item);
     }
   }
 
@@ -138,9 +140,17 @@ export class Actor {
   placeItem(position) {
     if (this.item !== undefined) {
       this.simulation.replaceElement(position, this.item);
+      this.item = undefined;
     } else {
       throw new Error(this.identifier + ' tried to place an item while it was not holding one');
     }
   }
+
+  // Calculate where to place algorithm
+  // case for each direction
+  // this.placeItem([
+  //   this.getPosition()[0] + x,
+  //   this.getPosition()[1] + y,
+  // ])
 
 }

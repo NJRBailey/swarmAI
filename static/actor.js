@@ -32,23 +32,25 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var Actor = exports.Actor = function () {
   /**
    * Create a new basic Actor
+   * @param {Object}     config      The config settings for Actors
    * @param {String}     identifier The unique identifier for this Actor
    * @param {Integer}    priority   The priority to use in path disputes - lower value means higher importance
    * @param {Array}      position   The coordinates of the starting position
    * @param {Simulation} simulation The Simulation to broadcast position, route, objective point to
    */
-  function Actor(identifier, priority, position, simulation) {
+  function Actor(config, simulation) {
     _classCallCheck(this, Actor);
 
-    this.identifier = identifier;
-    this.priority = priority;
+    this.config = config;
+    this.identifier = config.identifier;
+    this.priority = config.priority;
     this.simulation = simulation;
     // Whether the Actor should be performing tasks
     this.active = true;
     // Whether the Actor is carrying an item
     this._item = undefined;
     // The position of the Actor
-    this.position = position;
+    this.position = config.startingPosition;
 
     // for testing
     window.actors.push(this);
@@ -96,7 +98,7 @@ var Actor = exports.Actor = function () {
       var edges = this._getSurroundings();
       switch (direction) {
         case 'N':
-          if (this.simulation.config.groundElements.includes(edges[0])) {
+          if (this.config.ground.includes(edges[0])) {
             var north = [this.position[0] - 1, this.position[1]];
             this.simulation.swapElements(this.position, north);
             this.position = north;
@@ -105,7 +107,7 @@ var Actor = exports.Actor = function () {
           }
           break;
         case 'E':
-          if (this.simulation.config.groundElements.includes(edges[1])) {
+          if (this.config.ground.includes(edges[1])) {
             var east = [this.position[0], this.position[1] + 1];
             this.simulation.swapElements(this.position, east);
             this.position = east;
@@ -114,7 +116,7 @@ var Actor = exports.Actor = function () {
           }
           break;
         case 'S':
-          if (this.simulation.config.groundElements.includes(edges[2])) {
+          if (this.config.ground.includes(edges[2])) {
             var south = [this.position[0] + 1, this.position[1]];
             this.simulation.swapElements(this.position, south);
             this.position = south;
@@ -123,7 +125,7 @@ var Actor = exports.Actor = function () {
           }
           break;
         case 'W':
-          if (this.simulation.config.groundElements.includes(edges[3])) {
+          if (this.config.ground.includes(edges[3])) {
             var west = [this.position[0], this.position[1] - 1];
             this.simulation.swapElements(this.position, west);
             this.position = west;
@@ -142,16 +144,16 @@ var Actor = exports.Actor = function () {
   }, {
     key: 'takeItem',
     value: function takeItem(item) {
-      //TODO add a this.rules parameter to the contructor
-      if (this.simulation.config.itemElements.includes(item)) {
+      if (this.config.items.includes(item)) {
         var edges = this._getSurroundings();
         if (edges.includes(item)) {
-          this.item = item;
+          // Lower case indicates an item, rather than a spawner
+          this.item = item.toLowerCase();
         } else {
-          throw new Error(this.identifier + 'tried to take an item ' + item + ' that it was not next to');
+          throw new Error(this.identifier + ' tried to take an item: ' + item + ' that it was not next to');
         }
       } else {
-        throw new Error(this.identifier + 'tried to take an unspecified item ' + item);
+        throw new Error(this.identifier + 'tried to take an unspecified item: ' + item);
       }
     }
 
@@ -165,10 +167,19 @@ var Actor = exports.Actor = function () {
     value: function placeItem(position) {
       if (this.item !== undefined) {
         this.simulation.replaceElement(position, this.item);
+        this.item = undefined;
       } else {
         throw new Error(this.identifier + ' tried to place an item while it was not holding one');
       }
     }
+
+    // Calculate where to place algorithm
+    // case for each direction
+    // this.placeItem([
+    //   this.getPosition()[0] + x,
+    //   this.getPosition()[1] + y,
+    // ])
+
   }]);
 
   return Actor;

@@ -32,23 +32,25 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var Actor = exports.Actor = function () {
   /**
    * Create a new basic Actor
+   * @param {Object}     config      The config settings for Actors
    * @param {String}     identifier The unique identifier for this Actor
    * @param {Integer}    priority   The priority to use in path disputes - lower value means higher importance
    * @param {Array}      position   The coordinates of the starting position
    * @param {Simulation} simulation The Simulation to broadcast position, route, objective point to
    */
-  function Actor(identifier, priority, position, simulation) {
+  function Actor(config, simulation) {
     _classCallCheck(this, Actor);
 
-    this.identifier = identifier;
-    this.priority = priority;
+    this.config = config;
+    this.identifier = config.identifier;
+    this.priority = config.priority;
     this.simulation = simulation;
     // Whether the Actor should be performing tasks
     this.active = true;
     // Whether the Actor is carrying an item
     this._item = undefined;
     // The position of the Actor
-    this.position = position;
+    this.position = config.startingPosition;
 
     // for testing
     window.actors.push(this);
@@ -96,7 +98,7 @@ var Actor = exports.Actor = function () {
       var edges = this._getSurroundings();
       switch (direction) {
         case 'N':
-          if (this.simulation.config.groundElements.includes(edges[0])) {
+          if (this.config.ground.includes(edges[0])) {
             var north = [this.position[0] - 1, this.position[1]];
             this.simulation.swapElements(this.position, north);
             this.position = north;
@@ -105,7 +107,7 @@ var Actor = exports.Actor = function () {
           }
           break;
         case 'E':
-          if (this.simulation.config.groundElements.includes(edges[1])) {
+          if (this.config.ground.includes(edges[1])) {
             var east = [this.position[0], this.position[1] + 1];
             this.simulation.swapElements(this.position, east);
             this.position = east;
@@ -114,7 +116,7 @@ var Actor = exports.Actor = function () {
           }
           break;
         case 'S':
-          if (this.simulation.config.groundElements.includes(edges[2])) {
+          if (this.config.ground.includes(edges[2])) {
             var south = [this.position[0] + 1, this.position[1]];
             this.simulation.swapElements(this.position, south);
             this.position = south;
@@ -123,7 +125,7 @@ var Actor = exports.Actor = function () {
           }
           break;
         case 'W':
-          if (this.simulation.config.groundElements.includes(edges[3])) {
+          if (this.config.ground.includes(edges[3])) {
             var west = [this.position[0], this.position[1] - 1];
             this.simulation.swapElements(this.position, west);
             this.position = west;
@@ -142,16 +144,16 @@ var Actor = exports.Actor = function () {
   }, {
     key: 'takeItem',
     value: function takeItem(item) {
-      //TODO add a this.rules parameter to the contructor
-      if (this.simulation.config.itemElements.includes(item)) {
+      if (this.config.items.includes(item)) {
         var edges = this._getSurroundings();
         if (edges.includes(item)) {
-          this.item = item;
+          // Lower case indicates an item, rather than a spawner
+          this.item = item.toLowerCase();
         } else {
-          throw new Error(this.identifier + 'tried to take an item ' + item + ' that it was not next to');
+          throw new Error(this.identifier + ' tried to take an item: ' + item + ' that it was not next to');
         }
       } else {
-        throw new Error(this.identifier + 'tried to take an unspecified item ' + item);
+        throw new Error(this.identifier + 'tried to take an unspecified item: ' + item);
       }
     }
 
@@ -165,10 +167,19 @@ var Actor = exports.Actor = function () {
     value: function placeItem(position) {
       if (this.item !== undefined) {
         this.simulation.replaceElement(position, this.item);
+        this.item = undefined;
       } else {
         throw new Error(this.identifier + ' tried to place an item while it was not holding one');
       }
     }
+
+    // Calculate where to place algorithm
+    // case for each direction
+    // this.placeItem([
+    //   this.getPosition()[0] + x,
+    //   this.getPosition()[1] + y,
+    // ])
+
   }]);
 
   return Actor;
@@ -190,14 +201,14 @@ var rules = {
     identifier: 'newkid',
     priority: 1
   }],
-  // The area in which the simulation will take place - / = Solid, _ = Ground, Actor spawn, Material spawn, Objective
-  simulationArea: [['/', '/', '/', '/', '/', '/', '/', '/'], ['/', 'A', '_', '_', '_', '_', '_', '/'], ['/', 'A', '_', '_', 'O', 'O', '_', '/'], ['/', '_', '_', '_', 'O', 'O', '_', '/'], ['/', 'B', '_', '_', '_', '_', '_', '/'], ['/', '/', '/', '/', '/', '/', '/', '/']],
   // The elements Actors are allowed to move onto
   groundElements: ['_'],
   // The elements Actors can pick up
   itemElements: ['B'],
   // The elements Actors try to build
-  objectiveElements: ['O']
+  objectiveElements: ['O'],
+  // The area in which the simulation will take place - / = Solid, _ = Ground, Actor spawn, Material spawn, Objective
+  simulationArea: [['/', '/', '/', '/', '/', '/', '/', '/'], ['/', 'A', '_', '_', '_', '_', '_', '/'], ['/', 'A', '_', '_', 'O', 'O', '_', '/'], ['/', '_', '_', '_', 'O', 'O', '_', '/'], ['/', 'B', '_', '_', '_', '_', '_', '/'], ['/', '/', '/', '/', '/', '/', '/', '/']]
 };
 
 var simulation = new _simulation.Simulation(rules);
@@ -237,6 +248,7 @@ var Simulation = exports.Simulation = function () {
 
     // for testing
     window.actors = [];
+    window.sim = this;
 
     this.config = simulationConfig;
 
@@ -251,11 +263,27 @@ var Simulation = exports.Simulation = function () {
     for (var i = 0; i < this.config.actorCount; i++) {
       var actorDetails = this.config.actorDetails[i];
       var startingPosition = actorPositions[i];
-      var actor = new _actor.Actor(actorDetails.identifier, actorDetails.priority, startingPosition, this);
+      // Compile the rules the Actor will need
+      var actorConfig = {
+        identifier: actorDetails.identifier,
+        priority: actorDetails.priority,
+        startingPosition: startingPosition,
+        items: this.config.itemElements,
+        ground: this.config.groundElements,
+        objectives: this.config.objectiveElements
+      };
+      var actor = new _actor.Actor(actorConfig, this);
       // Creates an entry in the actors and paths Objects with identifier as the key
       this.actors[actorDetails.identifier] = actor;
       this.paths[actorDetails.identifier] = [];
     }
+
+    // Stores the objective locations so we can tell when they have been built
+    var objectiveSpaces = this._findPosition('O');
+
+    // while (objectiveSpaces.length...) {
+    //
+    //}
   }
 
   /**
@@ -268,11 +296,10 @@ var Simulation = exports.Simulation = function () {
   _createClass(Simulation, [{
     key: '_findPosition',
     value: function _findPosition(element) {
-      var simulationArea = this.config.simulationArea;
+      var simulationArea = this.area;
       var positions = [];
       for (var row = 0; row < simulationArea.length; row++) {
         for (var column = 0; column < simulationArea[row].length; column++) {
-          // TODO The x and y might be the wrong way round
           if (simulationArea[row][column] === element) {
             positions.push([row, column]);
           }
@@ -308,7 +335,41 @@ var Simulation = exports.Simulation = function () {
   }, {
     key: 'replaceElement',
     value: function replaceElement(position, newElement) {
-      this.area[(position[0], position[1])] = newElement;
+      this.area[position[0]][position[1]] = newElement;
+    }
+
+    /**
+     * Prints the simulation map (for a terminal game)
+     */
+
+  }, {
+    key: 'print',
+    value: function print() {
+      var simulationArea = this.area;
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = simulationArea[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var row = _step.value;
+
+          console.log(row);
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
     }
   }]);
 

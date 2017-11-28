@@ -14,6 +14,12 @@ let rules = {
       priority: 1,
     },
   ],
+  // The elements Actors are allowed to move onto
+  groundElements: ['_'],
+  // The elements Actors can pick up
+  itemElements: ['B'],
+  // The elements Actors try to build
+  objectiveElements: ['O'],
   // The area in which the simulation will take place - / = Solid, _ = Ground, Actor spawn, Material spawn, Objective
   simulationArea: [
     ['/','/','/','/','/','/','/','/'],
@@ -23,12 +29,6 @@ let rules = {
     ['/','B','_','_','_','_','_','/'],
     ['/','/','/','/','/','/','/','/']
   ],
-  // The elements Actors are allowed to move onto
-  groundElements: ['_'],
-  // The elements Actors can pick up
-  itemElements: ['B'],
-  // The elements Actors try to build
-  objectiveElements: ['O'],
 };
 
 let simulation = new Simulation(rules);

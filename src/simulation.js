@@ -19,6 +19,7 @@ export class Simulation {
   constructor(simulationConfig) {
     // for testing
     window.actors = [];
+    window.sim = this;
 
     this.config = simulationConfig;
 
@@ -33,11 +34,27 @@ export class Simulation {
     for (let i = 0; i < this.config.actorCount; i++) {
       let actorDetails = this.config.actorDetails[i];
       let startingPosition = actorPositions[i];
-      let actor = new Actor(actorDetails.identifier, actorDetails.priority, startingPosition, this);
+      // Compile the rules the Actor will need
+      let actorConfig = {
+        identifier: actorDetails.identifier,
+        priority: actorDetails.priority,
+        startingPosition: startingPosition,
+        items: this.config.itemElements,
+        ground: this.config.groundElements,
+        objectives: this.config.objectiveElements,
+      };
+      let actor = new Actor(actorConfig, this);
       // Creates an entry in the actors and paths Objects with identifier as the key
       this.actors[actorDetails.identifier] = actor;
       this.paths[actorDetails.identifier] = [];
     }
+
+    // Stores the objective locations so we can tell when they have been built
+    let objectiveSpaces = this._findPosition('O');
+
+    // while (objectiveSpaces.length...) {
+    //
+    //}
   }
 
   /**
@@ -46,11 +63,10 @@ export class Simulation {
    * @return {Array}         The coordinates of each element
    */
   _findPosition(element) {
-    let simulationArea = this.config.simulationArea;
+    let simulationArea = this.area;
     let positions = [];
     for (let row = 0; row < simulationArea.length; row++) {
       for (let column = 0; column < simulationArea[row].length; column++) {
-        // TODO The x and y might be the wrong way round
         if (simulationArea[row][column] === element) {
           positions.push([row,column]);
         }
@@ -80,7 +96,17 @@ export class Simulation {
    * @param {String} newElement The element to replace with
    */
   replaceElement(position, newElement) {
-    this.area[position[0], position[1]] = newElement;
+    this.area[position[0]][position[1]] = newElement;
+  }
+
+  /**
+   * Prints the simulation map (for a terminal game)
+   */
+  print() {
+    let simulationArea = this.area;
+    for (let row of simulationArea) {
+      console.log(row);
+    }
   }
 }
 
