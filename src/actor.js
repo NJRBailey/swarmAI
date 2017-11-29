@@ -1,3 +1,5 @@
+import {Node, SortedCostNodeList} from './pathfinding/a-star-search.js';
+
 /**
  * A basic Actor for the Simulation.
  * @version Basic
@@ -17,6 +19,9 @@
  * This point will then need to be temporarily blacklisted for that actor, until the next objective is completed
  * For this version of the Actor there are no chokepoints, so the Actors can be constantly moving.
  * Performing an action, like picking up or placing an item, takes one move.
+ *
+ * Could store multiple algorithms
+ * And optimisations could be things like 'only calculate x moves in front' where x depends
  */
 export class Actor {
   /**
@@ -144,6 +149,18 @@ export class Actor {
     } else {
       throw new Error(this.identifier + ' tried to place an item while it was not holding one');
     }
+  }
+
+  /**
+   * Starts the Actor's pathfinding goals.
+   * @param {Integer} time The time between moves in milliseconds
+   * 
+   * So A* needs checks each possible next move (i.e. N,E,S,W) and selects the one which
+   * the heuristic says is closest. 
+   */
+  activate(time) {
+
+    // setInterval(time)
   }
 
   // Calculate where to place algorithm

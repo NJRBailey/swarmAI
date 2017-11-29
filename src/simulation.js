@@ -100,6 +100,18 @@ export class Simulation {
   }
 
   /**
+   * Calculates the tile distance between the two positions
+   * @param  {Array}   firstPosition  The first position
+   * @param  {Array}   secondPosition The second position
+   * @return {Integer}                The tile distance (i.e. not straight-line)
+   */
+  findDistance(firstPosition, secondPosition) {
+    let distance;
+
+    return distance;
+  }
+
+  /**
    * Prints the simulation map (for a terminal game)
    */
   print() {
