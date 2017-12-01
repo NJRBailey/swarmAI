@@ -43,6 +43,8 @@ export class Actor {
     this._item = undefined;
     // The position of the Actor
     this.position = config.startingPosition;
+    // The current objective of the Actor
+    this.objective = undefined;
 
     // for testing
     window.actors.push(this);
@@ -52,7 +54,7 @@ export class Actor {
    * Returns the elements at the edge of the Actor.
    * @return {Array} The elements at each edge.
    */
-  _getSurroundings() {
+  getSurroundings() {
     // FIXME will probably crash if we check invalid indices (e.g. [-1])
     let actorRow = this.position[0];
     let actorColumn = this.position[1];
@@ -79,7 +81,7 @@ export class Actor {
    * @param {String} direction The direction to move in | N,E,S,W
    */
   move(direction) {
-    let edges = this._getSurroundings();
+    let edges = this.getSurroundings();
     switch (direction) {
       case 'N':
         if (this.config.ground.includes(edges[0])) {
@@ -126,7 +128,7 @@ export class Actor {
    */
   takeItem(item) {
     if (this.config.items.includes(item)) {
-      let edges = this._getSurroundings();
+      let edges = this.getSurroundings();
       if (edges.includes(item)) {
         // Lower case indicates an item, rather than a spawner
         this.item = item.toLowerCase();
@@ -154,9 +156,6 @@ export class Actor {
   /**
    * Starts the Actor's pathfinding goals.
    * @param {Integer} time The time between moves in milliseconds
-   * 
-   * So A* needs checks each possible next move (i.e. N,E,S,W) and selects the one which
-   * the heuristic says is closest. 
    */
   activate(time) {
 

@@ -77,6 +77,14 @@ export class Simulation {
   }
 
   /**
+   * Returns the element at the specified position
+   * @param {Array} position The position to check
+   */
+  getElement(position) {
+
+  }
+
+  /**
    * Switches the elements in the specified positions
    * @param {Array} firstPosition  The first position to swap
    * @param {Array} secondPosition The second position to swap
