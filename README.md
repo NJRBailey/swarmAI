@@ -18,5 +18,5 @@ First go at cooperative AI.
 - Bots need to move resources closer if it's impossible to cement without it drying
 - Use genetic algorithm to find best solution for shape
 - One problem is the Actor recalculating its path because another Actor is blocking a space, but if that Actor moved, the path revealed would be quicker.
-... - This could be solved by taking turns, but that would probably make every simulation take up to 2x as long as needed.
-... - You could calculate two paths, one going around, and one going over the other Actor. Then if the path over the Actor is 2 or more moves better than the path going around, wait for one turn and do that path (unless there will be a blockage with the other Actor anyway later on)
+  - This could be solved by taking turns, but that would probably make every simulation take up to 2x as long as needed.
+  - You could calculate two paths, one going around, and one going over the other Actor. Then if the path over the Actor is 2 or more moves better than the path going around, wait for one turn and do that path (unless there will be a blockage with the other Actor anyway later on)
