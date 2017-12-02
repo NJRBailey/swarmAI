@@ -1,17 +1,17 @@
 # swarmAI
 First go at cooperative AI.
 
-##Basic
+## Basic
 - Bots need to not collide
 - Bots need to not make same section
 - Bots need to not block a section from being made (e.g. a section which needs to be filled in should not be surrounded before it can be filled)
 
-##More advanced:
+## More advanced:
 - Bots need to not block each other in chokepoints (e.g. one-block wide corridors)
 - Bots need to cement blocks together - cement dries out after x number of moves
 - Bots need to navigate blockages in terrain without getting stuck
 
-##Even more advanced:
+## Even more advanced:
 - Moving obstacles
 - Bots need to return to charging port when power is low, and should do so before starting a task which will take more power than it currently has
 - Bots need to not block each other in chokepoints based on task importance
