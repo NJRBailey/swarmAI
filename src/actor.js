@@ -1,4 +1,7 @@
-import {Node, SortedCostNodeList} from './pathfinding/a-star-search.js';
+import {
+  Node,
+  SortedCostNodeList
+} from './pathfinding/a-star-search.js';
 
 /**
  * A basic Actor for the Simulation.
@@ -52,19 +55,27 @@ export class Actor {
 
   /**
    * Returns the elements at the edge of the Actor.
-   * @return {Array} The elements at each edge.
+   * @return {Object} The elements and positions at each edge.
    */
   getSurroundings() {
     // FIXME will probably crash if we check invalid indices (e.g. [-1])
     let actorRow = this.position[0];
     let actorColumn = this.position[1];
     // The elements on each of the four edges
-    let edges = [
-      this.simulation.area[actorRow - 1][actorColumn], // North
-      this.simulation.area[actorRow][actorColumn + 1], // East
-      this.simulation.area[actorRow + 1][actorColumn], // South
-      this.simulation.area[actorRow][actorColumn - 1], // West
-    ];
+    let edges = {
+      elements: [
+        this.simulation.area[actorRow - 1][actorColumn], // North
+        this.simulation.area[actorRow][actorColumn + 1], // East
+        this.simulation.area[actorRow + 1][actorColumn], // South
+        this.simulation.area[actorRow][actorColumn - 1], // West
+      ],
+      positions: [
+        [actorRow - 1, actorColumn], // North
+        [actorRow, actorColumn + 1], // East
+        [actorRow + 1, actorColumn], // South
+        [actorRow, actorColumn - 1], // West
+      ]
+    };
     return edges;
   }
 
@@ -81,7 +92,7 @@ export class Actor {
    * @param {String} direction The direction to move in | N,E,S,W
    */
   move(direction) {
-    let edges = this.getSurroundings();
+    let edges = this.getSurroundings().elements;
     switch (direction) {
       case 'N':
         if (this.config.ground.includes(edges[0])) {
@@ -129,14 +140,16 @@ export class Actor {
   takeItem(item) {
     if (this.config.items.includes(item)) {
       let edges = this.getSurroundings();
-      if (edges.includes(item)) {
-        // Lower case indicates an item, rather than a spawner
-        this.item = item.toLowerCase();
-      } else {
-        throw new Error(this.identifier + ' tried to take an item: ' + item + ' that it was not next to');
+      for (let edge of edges.elements) {
+        if (edges.includes(item)) {
+          // Lower case indicates an item, rather than a spawner
+          this.item = item.toLowerCase();
+        } else {
+          throw new Error(this.identifier + ' tried to take an item: ' + item + ' that it was not next to');
+        }
       }
     } else {
-      throw new Error(this.identifier +  'tried to take an unspecified item: ' + item);
+      throw new Error(this.identifier + 'tried to take an unspecified item: ' + item);
     }
   }
 

@@ -78,10 +78,10 @@ export class Simulation {
 
   /**
    * Returns the element at the specified position
-   * @param {Array} position The position to check
+   * @param {Array} position The position to check in the form [row, column]
    */
   getElement(position) {
-
+    return this.area[position[0]][position[1]]
   }
 
   /**

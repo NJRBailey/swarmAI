@@ -1,5 +1,5 @@
 /**
- *vA* needs checks each possible next move (i.e. N,E,S,W) and selects the one which
+ * A* needs checks each possible next move (i.e. N,E,S,W) and selects the one which
  * the heuristic says is closest.
  * Each non-start node is set to infinity. Then for each node we land on, we make its neighbours
  * cost equal the cost of the path + the cost of the current node + estimatedCostToTarget
@@ -17,6 +17,9 @@
  *
  * Checks are operated within this class. The Simulation and Actors do not deal with the
  * pathfinding logic.
+ *
+ * 
+ *
  */
 export class AStarSearch {
   /**
@@ -43,16 +46,30 @@ export class AStarSearch {
   }
 
   /**
+   * Moves along the path that has been calculated, and completes the current goal
+   * @param {Array} path The path calculated for the Actor to move along
+   */
+  performTaskStage(path) {
+
+  }
+
+  /**
    * Returns the valid edges around the Actor
    * @return {Array} The ground tiles around the Actor
    */
   getValidEdges(){
     let edges = this.actor.getSurroundings();
     let validEdges = [];
-    for (let edge of edges) {
-      if (this.actor.config.ground.includes(edge)) {
-        //TODO
+    for (let index = 0; index < edges.elements.length; index++) {
+      if (this.actor.config.ground.includes(edges.elements[index])) {
+        validEdges.push(edges.positions[index]);
       }
     }
+    if (validEdges.length === 0 && !edges.elements.includes('A')) {
+      throw new Error(this.actor.identifier + ' is surrounded by immovable objects');
+    } else if (validEdges.length === 0) { // There is an actor blocking us in
+      throw new Error(this.actor.identifier + ' is being blocked in by another Actor');
+    }
+    return validEdges;
   }
 }
