@@ -1,7 +1,4 @@
-import {
-  Node,
-  SortedCostNodeList
-} from './pathfinding/a-star-search.js';
+import {AStarSearch} from './pathfinding/a-star-search.js';
 
 /**
  * A basic Actor for the Simulation.
@@ -171,7 +168,7 @@ export class Actor {
    * @param {Integer} time The time between moves in milliseconds
    */
   activate(time) {
-
+    let searcher = new AStarSearch(this.simulation, this, this.config.heuristic);
     // setInterval(time)
   }
 

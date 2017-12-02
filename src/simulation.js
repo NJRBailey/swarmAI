@@ -42,6 +42,7 @@ export class Simulation {
         items: this.config.itemElements,
         ground: this.config.groundElements,
         objectives: this.config.objectiveElements,
+        heuristic: this.config.pathfindingHeuristic,
       };
       let actor = new Actor(actorConfig, this);
       // Creates an entry in the actors and paths Objects with identifier as the key

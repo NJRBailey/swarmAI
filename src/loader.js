@@ -29,6 +29,13 @@ let rules = {
     ['/','B','_','_','_','_','_','/'],
     ['/','/','/','/','/','/','/','/']
   ],
+  pathfindingHeuristic: function(currentPos, targetPos) {
+    let cost = 0;
+    cost = (
+      Math.abs(currentPos[0] - targetPos[0]) + Math.abs(currentPos[1] - targetPos[1])
+    );
+    return cost;
+  }
 };
 
 let simulation = new Simulation(rules);
