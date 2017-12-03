@@ -1,4 +1,5 @@
 import {Actor} from './actor.js';
+import TinyQueue from 'tinyqueue';
 
 /**
  * A simulation of cooperative (Swarm) AI.
@@ -21,14 +22,27 @@ export class Simulation {
     window.actors = [];
     window.sim = this;
 
+    window.testQueue = new TinyQueue([], function(a, b) {
+      return (
+        (Math.abs(1 - a[0]) + Math.abs(1 - a[1]))
+        - (Math.abs(1 - b[0]) + Math.abs(1 - b[1]))
+      );
+    });
+
     this.config = simulationConfig;
 
     this.area = this.config.simulationArea;
 
     // Store the actors
-    this.actors = {};
+    this.actors = [];
     // Stores the current paths for each actor
     this.paths = {};
+    // Stores the objective locations so we can tell when they have been built
+    this.objectiveSpaces = [];
+    for (let objective of this.config.objectiveElements) {
+      this.objectiveSpaces = this.objectiveSpaces.concat(this._findPosition(objective));
+    }
+
     // Create the Actors
     let actorPositions = this._findPosition('A');
     for (let i = 0; i < this.config.actorCount; i++) {
@@ -41,21 +55,13 @@ export class Simulation {
         startingPosition: startingPosition,
         items: this.config.itemElements,
         ground: this.config.groundElements,
-        objectives: this.config.objectiveElements,
         heuristic: this.config.pathfindingHeuristic,
       };
       let actor = new Actor(actorConfig, this);
       // Creates an entry in the actors and paths Objects with identifier as the key
-      this.actors[actorDetails.identifier] = actor;
+      this.actors.push = actor;
       this.paths[actorDetails.identifier] = [];
     }
-
-    // Stores the objective locations so we can tell when they have been built
-    let objectiveSpaces = this._findPosition('O');
-
-    // while (objectiveSpaces.length...) {
-    //
-    //}
   }
 
   /**

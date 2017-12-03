@@ -35,7 +35,7 @@ export class AStarSearch {
     this.actor = actor;
     this.heuristic = heuristic;
     // The position of the next objective
-    let objective = this.actor.objective;
+    // let objective = this.actor.objective;
     // while (objective !== undefined) {}
   }
 
@@ -48,31 +48,52 @@ export class AStarSearch {
    * @return {Array}         The list of positions to get to the target
    */
   calculateShortestPath(current, target) {
-    let checked = [];
+    return this.calculateNextStep(current, target);
   }
 
   /**
+   * A recursive function which calculates each step of the path between the current
+   * path position and the target position.
    *
    * @param {Array} path The path that has been calculated so far
    * @param {Array} target The target position
-   * @param {Array} checkedTiles The tiles checked already
+   * @param {Array} checkedTiles The tiles checked already // toto maybe useful?
    */
-  calculateNextStep(path, target, checkedTiles) {
+  calculateNextStep(path, target) {
     let currentNode = path[path.length - 1];
-    let orderedTiles = new TinyQueue();
+    let orderedQueue = new TinyQueue([], function(a, b){
+      return a.cost - b.cost;
+    });
+
     let tiles = this.getValidEdges(currentNode.position);
+    // If we are next to the target, we have finished searching
+    if (tiles.includes(target)) {
+      return path.push(target);
+    }
+
     for (let tile of tiles) {
       // Populate array of tiles from lowest-cost to highest cost
       let cost = 1 + tile.cost + this.heuristic(currentNode.position, target);
-      // TODO tinyqueue
+      orderedQueue.push({
+        position: tile,
+        cost: cost
+      });
     }
-  }
+    // Convert the non-iterable priority queue into an array
+    let orderedTiles = [];
+    while (TinyQueue.length > 0) orderedTiles.push(orderedQueue.pop());
 
-  /**
-   * Moves along the path that has been calculated, and completes the current goal
-   * @param {Array} path The path calculated for the Actor to move along
-   */
-  performTaskStage(path) {}
+    // Iterate through each step
+    for (let tile of orderedTiles) {
+      if (!path.includes(tile.position)) {
+        let continuedRoute = calculateNextStep(path.push(tile.position), target);
+        if (continuedRoute !== null) {
+          return continuedRoute;
+        }
+      }
+    }
+    return null;
+  }
 
   /**
    * Returns the positions of the ground tiles around the specified tile
