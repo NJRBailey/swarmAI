@@ -48,7 +48,7 @@ export class AStarSearch {
    * @return {Array}         The list of positions to get to the target
    */
   calculateShortestPath(current, target) {
-    return this.calculateNextStep(current, target);
+    return this.calculateNextStep([current], target);
   }
 
   /**

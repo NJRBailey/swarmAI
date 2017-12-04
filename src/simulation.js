@@ -42,6 +42,11 @@ export class Simulation {
     for (let objective of this.config.objectiveElements) {
       this.objectiveSpaces = this.objectiveSpaces.concat(this._findPosition(objective));
     }
+    // Store the locations of all item dispensers
+    this.itemSpaces = [];
+    for (let item of this.config.itemElements) {
+      this.itemSpaces = this.itemSpaces.concat(this._findPosition(item));
+    }
 
     // Create the Actors
     let actorPositions = this._findPosition('A');

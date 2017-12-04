@@ -206,6 +206,30 @@ export class Actor {
           this.objective = this.sortedObjectives[0];
         }
       }
+      if (this.item === undefined) { // If we aren't holding an item, go to the nearest resource
+      // We sort the resources
+        let distanceSortedDispensers = new TinyQueue(this.simulation.itemSpaces, function(a, b) {
+          return (
+            Math.abs(this.position[0] - a[0]) +
+            Math.abs(this.position[1] - a[1]) -
+            (Math.abs(this.position[0] - b[0]) + Math.abs(this.position[1] - b[1]))
+          );
+        });
+        // Pick the nearest one
+        let dispenser = distanceSortedDispensers.peek();
+        this.path = this.searcher.calculateShortestPath(this.position, dispenser);
+      } else {
+        this.path = this.searcher.calculateShortestPath(this.position, this.objective);
+      }
+      // Check that the path won't cause a collision with another Actor
+      // If it will, recalculate with that tile blacklisted, and repeat until there will be no collisions
+      for (let actor of this.simulation.actors) {
+        for (let index = 0; index < path.length; index++) {
+          if (this.path[index] === actor.path[index] && this.priority < actor.priority) {
+            // Blacklist somehow :S
+          }
+        }
+      }
       // need to update objectives list
     }
     // let path = this.searcher.
