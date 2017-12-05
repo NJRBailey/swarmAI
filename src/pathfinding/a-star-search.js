@@ -45,21 +45,28 @@ export class AStarSearch {
    * or all nodes have been checked.
    * @param  {Array} current The current position of the Actor.
    * @param  {Array} target  The target position.
+   * @param  {Array} [area]  The area to search through.
    * @return {Array}         The list of positions to get to the target
    */
-  calculateShortestPath(current, target) {
-    return this.calculateNextStep([current], target);
+  calculateShortestPath(current, target, area = undefined) {
+    // Set the area to search
+    if (area !== undefined) {
+      this.area = area;
+    } else {
+      this.area = this.simulation.area;
+    }
+    return this._calculateNextStep([current], target);
   }
 
   /**
    * A recursive function which calculates each step of the path between the current
    * path position and the target position.
    *
-   * @param {Array} path The path that has been calculated so far
+   * @param {Array} path   The path that has been calculated so far
    * @param {Array} target The target position
-   * @param {Array} checkedTiles The tiles checked already // toto maybe useful?
+   * @param {Array} [area] The area to search through
    */
-  calculateNextStep(path, target) {
+  _calculateNextStep(path, target) {
     let currentNode = path[path.length - 1];
     let orderedQueue = new TinyQueue([], function(a, b){
       return a.cost - b.cost;
@@ -68,7 +75,7 @@ export class AStarSearch {
     let tiles = this.getValidEdges(currentNode.position);
     // If we are next to the target, we have finished searching
     if (tiles.includes(target)) {
-      return path.push(target);
+      return path;
     }
 
     for (let tile of tiles) {
@@ -86,7 +93,7 @@ export class AStarSearch {
     // Iterate through each step
     for (let tile of orderedTiles) {
       if (!path.includes(tile.position)) {
-        let continuedRoute = calculateNextStep(path.push(tile.position), target);
+        let continuedRoute = _calculateNextStep(path.push(tile.position), target);
         if (continuedRoute !== null) {
           return continuedRoute;
         }
@@ -104,10 +111,10 @@ export class AStarSearch {
     // let edges = this.actor.getSurroundings();
     let edges = {
       elements: [
-        this.simulation.area[(position[0] - 1, position[1])], // North
-        this.simulation.area[(position[0], position[1] + 1)], // East
-        this.simulation.area[(position[0] + 1, position[1])], // South
-        this.simulation.area[(position[0], position[1] - 1)] // West
+        this.area[(position[0] - 1, position[1])], // North
+        this.area[(position[0], position[1] + 1)], // East
+        this.area[(position[0] + 1, position[1])], // South
+        this.area[(position[0], position[1] - 1)] // West
       ],
       positions: [
         [position[0] - 1, position[1]],

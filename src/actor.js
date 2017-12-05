@@ -1,4 +1,6 @@
-import { AStarSearch } from "./pathfinding/a-star-search.js";
+import {
+  AStarSearch
+} from "./pathfinding/a-star-search.js";
 import TinyQueue from "tinyqueue";
 
 /**
@@ -50,7 +52,7 @@ export class Actor {
     this.path = [];
     // Objective priorities as an array
     // Sorts based on total number of moves required to reach objective from spawn
-    let objectivePriorityQueue = new TinyQueue([], function(a, b) {
+    let objectivePriorityQueue = new TinyQueue([], function (a, b) {
       return (
         Math.abs(this.position[0] - a[0]) +
         Math.abs(this.position[1] - a[1]) -
@@ -66,7 +68,7 @@ export class Actor {
   }
 
   /**
-   * Returns the elements at the edge of the Actor.
+   * Returns the elements and positions at the edge of the Actor.
    * @return {Object} The elements and positions at each edge.
    */
   getSurroundings() {
@@ -100,10 +102,28 @@ export class Actor {
   }
 
   /**
+   * Moves the Actor to the specified position if valid
+   * @param {Array} position The position to move to
+   */
+  _move(position) {
+    let edges = this.getSurroundings();
+    if (edges.positions.includes(position)) {
+      // If we're trying to move into a ground element...
+      if (this.ground.includes(edges.elements[edges.positions.indexOf(position)])) {
+        this.simulation.swapElements(this.position, position);
+      } else {
+        throw new Error(this.identifier + ' tried to move into an invalid element.');
+      }
+    } else {
+      throw new Error(this.identifier + ' tried to move to a position '+ position +' that it was not next to.');
+    }
+  }
+
+  /**
    * Moves one position in the specified direction, if allowed.
    * @param {String} direction The direction to move in | N,E,S,W
    */
-  move(direction) {
+  moveCardinal(direction) {
     let edges = this.getSurroundings().elements;
     switch (direction) {
       case "N":
@@ -159,9 +179,9 @@ export class Actor {
         } else {
           throw new Error(
             this.identifier +
-              " tried to take an item: " +
-              item +
-              " that it was not next to"
+            " tried to take an item: " +
+            item +
+            " that it was not next to"
           );
         }
       }
@@ -188,10 +208,12 @@ export class Actor {
   }
 
   /**
-   * Starts the Actor's pathfinding goals.
-   * @param {Integer} time The time between moves in milliseconds
+   * Pathfind to goal
    */
-  activate(time) {
+  navigate() {
+    // Will be set to the nearest item dispenser
+    let dispenser;
+
     this.searcher = new AStarSearch(
       this.simulation,
       this,
@@ -207,8 +229,8 @@ export class Actor {
         }
       }
       if (this.item === undefined) { // If we aren't holding an item, go to the nearest resource
-      // We sort the resources
-        let distanceSortedDispensers = new TinyQueue(this.simulation.itemSpaces, function(a, b) {
+        // We sort the resources
+        let distanceSortedDispensers = new TinyQueue(this.simulation.itemSpaces, function (a, b) {
           return (
             Math.abs(this.position[0] - a[0]) +
             Math.abs(this.position[1] - a[1]) -
@@ -216,21 +238,47 @@ export class Actor {
           );
         });
         // Pick the nearest one
-        let dispenser = distanceSortedDispensers.peek();
+        dispenser = distanceSortedDispensers.peek();
         this.path = this.searcher.calculateShortestPath(this.position, dispenser);
       } else {
         this.path = this.searcher.calculateShortestPath(this.position, this.objective);
       }
+
       // Check that the path won't cause a collision with another Actor
       // If it will, recalculate with that tile blacklisted, and repeat until there will be no collisions
+
+      // Holds the positions which this Actor should not travel upon to reach this goal
+      let blacklistArea = this.simulation.area;
       for (let actor of this.simulation.actors) {
         for (let index = 0; index < path.length; index++) {
           if (this.path[index] === actor.path[index] && this.priority < actor.priority) {
-            // Blacklist somehow :S
+            // Set the position as impassable for this Actor
+            blacklistArea[this.path[index][0]][this.path[index][1]] = '/';
           }
         }
       }
-      // need to update objectives list
+      // If any collision points have been identified, recalculate the path
+      if (blacklistArea.length > 0) {
+        if (dispenser !== undefined) {
+          this.path = this.searcher.calculateShortestPath(this.position, dispenser, blacklistArea);
+        } else {
+          this.path = this.searcher.calculateShortestPath(this.position, this.objective, blacklistArea);
+        }
+      }
+      // Now follow the path
+      for (let position of this.path) {
+        this._move(position);
+      }
+      // We're next to the goal
+      if (dispenser !== undefined) {
+        this.takeItem('B');
+      } else {
+        this.placeItem(this.objective);
+        // Update objectives list
+        // TODO there will probably be a race condition between the two lines here.
+        let objectiveIndex = this.simulation.objectiveSpaces.indexOf(this.objective);
+        this.simulation.objectiveSpaces.splice(objectiveIndex, 1);
+      }
     }
     // let path = this.searcher.
     // setInterval(time)
