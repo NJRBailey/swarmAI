@@ -114,6 +114,7 @@ export class Simulation {
     let secondElement = this.area[s[0]][s[1]];
     this.area[f[0]][f[1]] = secondElement;
     this.area[s[0]][s[1]] = firstElement;
+    this.print();
   }
 
   /**
@@ -123,6 +124,7 @@ export class Simulation {
    */
   replaceElement(position, newElement) {
     this.area[position[0]][position[1]] = newElement;
+    this.print();
   }
 
   /**

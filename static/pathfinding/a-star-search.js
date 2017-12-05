@@ -154,6 +154,7 @@ var AStarSearch = exports.AStarSearch = function () {
    * or all nodes have been checked.
    * @param  {Array} current The current position of the Actor.
    * @param  {Array} target  The target position.
+   * @param  {Array} [area]  The area to search through.
    * @return {Array}         The list of positions to get to the target
    */
 
@@ -161,30 +162,38 @@ var AStarSearch = exports.AStarSearch = function () {
   _createClass(AStarSearch, [{
     key: "calculateShortestPath",
     value: function calculateShortestPath(current, target) {
-      return this.calculateNextStep(current, target);
+      var area = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
+
+      // Set the area to search
+      if (area !== undefined) {
+        this.area = area;
+      } else {
+        this.area = this.simulation.area;
+      }
+      return this._calculateNextStep([current], target);
     }
 
     /**
      * A recursive function which calculates each step of the path between the current
      * path position and the target position.
      *
-     * @param {Array} path The path that has been calculated so far
+     * @param {Array} path   The path that has been calculated so far
      * @param {Array} target The target position
-     * @param {Array} checkedTiles The tiles checked already // toto maybe useful?
+     * @param {Array} [area] The area to search through
      */
 
   }, {
-    key: "calculateNextStep",
-    value: function (_calculateNextStep) {
-      function calculateNextStep(_x, _x2) {
-        return _calculateNextStep.apply(this, arguments);
+    key: "_calculateNextStep",
+    value: function (_calculateNextStep2) {
+      function _calculateNextStep(_x, _x2) {
+        return _calculateNextStep2.apply(this, arguments);
       }
 
-      calculateNextStep.toString = function () {
-        return _calculateNextStep.toString();
+      _calculateNextStep.toString = function () {
+        return _calculateNextStep2.toString();
       };
 
-      return calculateNextStep;
+      return _calculateNextStep;
     }(function (path, target) {
       var currentNode = path[path.length - 1];
       var orderedQueue = new _tinyqueue2.default([], function (a, b) {
@@ -194,7 +203,7 @@ var AStarSearch = exports.AStarSearch = function () {
       var tiles = this.getValidEdges(currentNode.position);
       // If we are next to the target, we have finished searching
       if (tiles.includes(target)) {
-        return path.push(target);
+        return path;
       }
 
       var _iteratorNormalCompletion = true;
@@ -241,7 +250,7 @@ var AStarSearch = exports.AStarSearch = function () {
           var _tile = _step2.value;
 
           if (!path.includes(_tile.position)) {
-            var continuedRoute = calculateNextStep(path.push(_tile.position), target);
+            var continuedRoute = _calculateNextStep(path.push(_tile.position), target);
             if (continuedRoute !== null) {
               return continuedRoute;
             }
@@ -276,10 +285,10 @@ var AStarSearch = exports.AStarSearch = function () {
     value: function getValidEdges(position) {
       // let edges = this.actor.getSurroundings();
       var edges = {
-        elements: [this.simulation.area[(position[0] - 1, position[1])], // North
-        this.simulation.area[(position[0], position[1] + 1)], // East
-        this.simulation.area[(position[0] + 1, position[1])], // South
-        this.simulation.area[(position[0], position[1] - 1)] // West
+        elements: [this.area[(position[0] - 1, position[1])], // North
+        this.area[(position[0], position[1] + 1)], // East
+        this.area[(position[0] + 1, position[1])], // South
+        this.area[(position[0], position[1] - 1)] // West
         ],
         positions: [[position[0] - 1, position[1]], [position[0], position[1] + 1], [position[0] + 1, position[1]], [position[0], position[1] - 1]]
       };
