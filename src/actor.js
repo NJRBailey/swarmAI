@@ -52,7 +52,7 @@ export class Actor {
     this.path = [];
     // Objective priorities as an array
     // Sorts based on total number of moves required to reach objective from spawn
-    let objectivePriorityQueue = new TinyQueue([], function (a, b) {
+    let objectivePriorityQueue = new TinyQueue(this.config.objectives, function (a, b) {
       return (
         Math.abs(this.position[0] - a[0]) +
         Math.abs(this.position[1] - a[1]) -
@@ -117,6 +117,7 @@ export class Actor {
     } else {
       throw new Error(this.identifier + ' tried to move to a position '+ position +' that it was not next to.');
     }
+    this.simulation.print();
   }
 
   /**
@@ -190,6 +191,7 @@ export class Actor {
         this.identifier + "tried to take an unspecified item: " + item
       );
     }
+    this.simulation.print();
   }
 
   /**
@@ -205,6 +207,7 @@ export class Actor {
         this.identifier + " tried to place an item while it was not holding one"
       );
     }
+    this.simulation.print();
   }
 
   /**
@@ -275,13 +278,11 @@ export class Actor {
       } else {
         this.placeItem(this.objective);
         // Update objectives list
-        // TODO there will probably be a race condition between the two lines here.
-        let objectiveIndex = this.simulation.objectiveSpaces.indexOf(this.objective);
-        this.simulation.objectiveSpaces.splice(objectiveIndex, 1);
+        delete this.simulation.objectives[this.objective];
+        this.sortedObjectives.shift();
+        this.objective = this.sortedObjectives.peek();
       }
     }
-    // let path = this.searcher.
-    // setInterval(time)
   }
 
   // Calculate where to place algorithm

@@ -9,7 +9,7 @@ import TinyQueue from 'tinyqueue';
  * - An Actor will never be completely surrounded
  * - An Actor can carry one item at a time
  * 
- * @version 1.0 Basic
+ * @version Basic
  * @author NJRBailey
  */
 export class Simulation {
@@ -42,6 +42,11 @@ export class Simulation {
     for (let objective of this.config.objectiveElements) {
       this.objectiveSpaces = this.objectiveSpaces.concat(this._findPosition(objective));
     }
+    // Stores the objective locations as an object to prevent removal race conditions
+    this.objectives = {};
+    for (let position of this.objectiveSpaces) {
+      this.objectives[position] = this.getElement(position);
+    }
     // Store the locations of all item dispensers
     this.itemSpaces = [];
     for (let item of this.config.itemElements) {
@@ -60,6 +65,7 @@ export class Simulation {
         startingPosition: startingPosition,
         items: this.config.itemElements,
         ground: this.config.groundElements,
+        objectives: this.objectiveSpaces,
         heuristic: this.config.pathfindingHeuristic,
       };
       let actor = new Actor(actorConfig, this);
