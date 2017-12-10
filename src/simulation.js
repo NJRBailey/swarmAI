@@ -90,7 +90,6 @@ export class Simulation {
         }
       }
     }
-    console.log(positions);
     return positions;
   }
 

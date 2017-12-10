@@ -141,6 +141,8 @@ var Actor = exports.Actor = function () {
    * @param {Simulation} simulation The Simulation to broadcast position, route, objective point to
    */
   function Actor(config, simulation) {
+    var _this = this;
+
     _classCallCheck(this, Actor);
 
     this.config = config;
@@ -160,12 +162,14 @@ var Actor = exports.Actor = function () {
     // Objective priorities as an array
     // Sorts based on total number of moves required to reach objective from spawn
     var objectivePriorityQueue = new _tinyqueue2.default(this.config.objectives, function (a, b) {
-      return Math.abs(this.position[0] - a[0]) + Math.abs(this.position[1] - a[1]) - (Math.abs(this.position[0] - b[0]) + Math.abs(this.position[1] - b[1]));
+      return Math.abs(_this.position[0] - a[0]) + Math.abs(_this.position[1] - a[1]) - (Math.abs(_this.position[0] - b[0]) + Math.abs(_this.position[1] - b[1]));
     });
     this.sortedObjectives = [];
-    while (_tinyqueue2.default.length > 0) {
-      sortedObjectives.push(objectivePriorityQueue.pop());
-    } // for testing
+    while (objectivePriorityQueue.length > 0) {
+      this.sortedObjectives.push(objectivePriorityQueue.pop());
+    }
+
+    // for testing
     window.actors.push(this);
   }
 
@@ -391,9 +395,19 @@ var Actor = exports.Actor = function () {
           });
           // Pick the nearest one
           dispenser = distanceSortedDispensers.peek();
+          console.log('calculating shortest path to dispenser');
           this.path = this.searcher.calculateShortestPath(this.position, dispenser);
+          console.log('calculated shortest path to dispenser');
+          console.log(this.path);
         } else {
+          console.log('calculating shortest path to objective');
           this.path = this.searcher.calculateShortestPath(this.position, this.objective);
+          console.log('calculated shortest path to objective');
+          console.log(this.path);
+        }
+        // Check that there is a path to follow
+        if (this.path.includes(null) || this.path === null) {
+          throw new Error('Path contained null values. Path returned as: ' + this.path);
         }
 
         // Check that the path won't cause a collision with another Actor
@@ -416,7 +430,6 @@ var Actor = exports.Actor = function () {
               }
             }
           }
-          // If any collision points have been identified, recalculate the path
         } catch (err) {
           _didIteratorError3 = true;
           _iteratorError3 = err;
@@ -432,11 +445,15 @@ var Actor = exports.Actor = function () {
           }
         }
 
+        console.log('created blacklist area');
+        // If any collision points have been identified, recalculate the path
         if (blacklistArea.length > 0) {
           if (dispenser !== undefined) {
             this.path = this.searcher.calculateShortestPath(this.position, dispenser, blacklistArea);
+            console.log('calculated shortest path with blacklist');
           } else {
             this.path = this.searcher.calculateShortestPath(this.position, this.objective, blacklistArea);
+            console.log('calculated shortest path with blacklist');
           }
         }
         // Now follow the path
@@ -450,7 +467,6 @@ var Actor = exports.Actor = function () {
 
             this._move(position);
           }
-          // We're next to the goal
         } catch (err) {
           _didIteratorError4 = true;
           _iteratorError4 = err;
@@ -466,14 +482,18 @@ var Actor = exports.Actor = function () {
           }
         }
 
+        console.log('moved along path');
+        // We're next to the goal
         if (dispenser !== undefined) {
           this.takeItem('B');
+          this.simulation.print();
         } else {
           this.placeItem(this.objective);
           // Update objectives list
           delete this.simulation.objectives[this.objective];
           this.sortedObjectives.shift();
           this.objective = this.sortedObjectives.peek();
+          this.simulation.print();
         }
       }
     }
@@ -491,7 +511,7 @@ var Actor = exports.Actor = function () {
 }();
 
 },{"./pathfinding/a-star-search.js":3,"tinyqueue":1}],3:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -500,7 +520,7 @@ exports.AStarSearch = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _tinyqueue = require("tinyqueue");
+var _tinyqueue = require('tinyqueue');
 
 var _tinyqueue2 = _interopRequireDefault(_tinyqueue);
 
@@ -529,6 +549,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * Checks are operated within this class. The Simulation and Actors do not deal with the
  * pathfinding logic.
  *
+ * todo figure out recursion
  *
  *
  */
@@ -562,7 +583,7 @@ var AStarSearch = exports.AStarSearch = function () {
 
 
   _createClass(AStarSearch, [{
-    key: "calculateShortestPath",
+    key: 'calculateShortestPath',
     value: function calculateShortestPath(current, target) {
       var area = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
 
@@ -585,96 +606,120 @@ var AStarSearch = exports.AStarSearch = function () {
      */
 
   }, {
-    key: "_calculateNextStep",
-    value: function (_calculateNextStep2) {
-      function _calculateNextStep(_x, _x2) {
-        return _calculateNextStep2.apply(this, arguments);
-      }
-
-      _calculateNextStep.toString = function () {
-        return _calculateNextStep2.toString();
-      };
-
-      return _calculateNextStep;
-    }(function (path, target) {
+    key: '_calculateNextStep',
+    value: function _calculateNextStep(path, target) {
       var currentNode = path[path.length - 1];
+      console.log('path: ' + path);
+      console.log('currentNode: ' + currentNode);
+      // Queue in order of estimated cost
       var orderedQueue = new _tinyqueue2.default([], function (a, b) {
         return a.cost - b.cost;
       });
 
-      var tiles = this.getValidEdges(currentNode.position);
+      var tiles = this.getValidEdges(currentNode);
       // If we are next to the target, we have finished searching
+      console.log("tiles");
+      console.log(tiles);
+      console.log("target");
+      console.log(target);
       if (tiles.includes(target)) {
+        console.log('Target found, returning path');
         return path;
-      }
+      } else if (currentNode === target) {
+        throw new Error('Trying to pathfind to the current position.');
+      } else {
+        // We need to search for the next step
+        // Populate array of tiles from lowest cost to highest cost
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
 
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
-
-      try {
-        for (var _iterator = tiles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var tile = _step.value;
-
-          // Populate array of tiles from lowest-cost to highest cost
-          var cost = 1 + tile.cost + this.heuristic(currentNode.position, target);
-          orderedQueue.push({
-            position: tile,
-            cost: cost
-          });
-        }
-        // Convert the non-iterable priority queue into an array
-      } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
-      } finally {
         try {
-          if (!_iteratorNormalCompletion && _iterator.return) {
-            _iterator.return();
+          for (var _iterator = tiles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var tile = _step.value;
+
+            // The first tile won't have a cost or position associated with it yet
+            if (tile.cost === undefined) {
+              tile.cost = 0;
+              tile.position = [tile[0], tile[1]];
+            }
+            // let cost = 1 + tile.cost + this.heuristic(currentNode, target);
+            var cost = 1 + tile.cost + this.heuristic(tile.position, target);
+
+            console.log('cost: ' + cost);
+            orderedQueue.push({
+              position: tile,
+              cost: cost
+            });
           }
+          // Convert the non-iterable priority queue into an array
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
         } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
-          }
-        }
-      }
-
-      var orderedTiles = [];
-      while (_tinyqueue2.default.length > 0) {
-        orderedTiles.push(orderedQueue.pop());
-      } // Iterate through each step
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
-
-      try {
-        for (var _iterator2 = orderedTiles[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var _tile = _step2.value;
-
-          if (!path.includes(_tile.position)) {
-            var continuedRoute = _calculateNextStep(path.push(_tile.position), target);
-            if (continuedRoute !== null) {
-              return continuedRoute;
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
             }
           }
         }
-      } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
-      } finally {
+
+        var orderedTiles = [];
+        while (orderedQueue.length > 0) {
+          orderedTiles.push(orderedQueue.pop());
+        }
+
+        // Iterate through each step
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
         try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-            _iterator2.return();
+          for (var _iterator2 = orderedTiles[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var _tile = _step2.value;
+
+            console.log(_tile);
+            if (!path.includes(_tile.position)) {
+              console.log('recursing deeper');
+              console.log('tile: ' + JSON.stringify(_tile));
+              // Add this tile as the next step in the path
+              path.push(_tile.position);
+              var continuedRoute = this._calculateNextStep(path, // TODO The path should be an array of objects with positions and costs.
+              // The position and cost can be used on each iteration.
+              // Then the calculateShortestPath() method can just grab the positions from the returned path
+              // Alternatively pass a path, a target, and a current node (node has the cost, path gets added to)
+              // But easier to get working due to way it's written with first solution
+              target);
+              if (continuedRoute !== null) {
+                console.log('returned route was not null, returning path');
+                return continuedRoute;
+              }
+              path.pop();
+            }
           }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
         } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+              _iterator2.return();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
           }
         }
-      }
 
-      return null;
-    })
+        console.log('all possible routes from the current tile returned null');
+        return null;
+      }
+    }
 
     /**
      * Returns the positions of the ground tiles around the specified tile
@@ -683,14 +728,14 @@ var AStarSearch = exports.AStarSearch = function () {
      */
 
   }, {
-    key: "getValidEdges",
+    key: 'getValidEdges',
     value: function getValidEdges(position) {
       // let edges = this.actor.getSurroundings();
       var edges = {
-        elements: [this.area[(position[0] - 1, position[1])], // North
-        this.area[(position[0], position[1] + 1)], // East
-        this.area[(position[0] + 1, position[1])], // South
-        this.area[(position[0], position[1] - 1)] // West
+        elements: [this.area[position[0] - 1][position[1]], // North
+        this.area[position[0]][position[1] + 1], // East
+        this.area[position[0] + 1][position[1]], // South
+        this.area[position[0]][position[1] - 1] // West
         ],
         positions: [[position[0] - 1, position[1]], [position[0], position[1] + 1], [position[0] + 1, position[1]], [position[0], position[1] - 1]]
       };

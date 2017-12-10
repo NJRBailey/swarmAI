@@ -52,7 +52,7 @@ export class Actor {
     this.path = [];
     // Objective priorities as an array
     // Sorts based on total number of moves required to reach objective from spawn
-    let objectivePriorityQueue = new TinyQueue(this.config.objectives, function (a, b) {
+    let objectivePriorityQueue = new TinyQueue(this.config.objectives, (a, b) => {
       return (
         Math.abs(this.position[0] - a[0]) +
         Math.abs(this.position[1] - a[1]) -
@@ -60,8 +60,9 @@ export class Actor {
       );
     });
     this.sortedObjectives = [];
-    while (TinyQueue.length > 0)
-      sortedObjectives.push(objectivePriorityQueue.pop());
+    while (objectivePriorityQueue.length > 0) {
+      this.sortedObjectives.push(objectivePriorityQueue.pop());
+    }
 
     // for testing
     window.actors.push(this);
@@ -242,9 +243,19 @@ export class Actor {
         });
         // Pick the nearest one
         dispenser = distanceSortedDispensers.peek();
+        console.log('calculating shortest path to dispenser');
         this.path = this.searcher.calculateShortestPath(this.position, dispenser);
+        console.log('calculated shortest path to dispenser');
+        console.log(this.path);
       } else {
+        console.log('calculating shortest path to objective');
         this.path = this.searcher.calculateShortestPath(this.position, this.objective);
+        console.log('calculated shortest path to objective');
+        console.log(this.path);
+      }
+      // Check that there is a path to follow
+      if (this.path.includes(null) || this.path === null) {
+        throw new Error('Path contained null values. Path returned as: ' + this.path);
       }
 
       // Check that the path won't cause a collision with another Actor
@@ -260,27 +271,33 @@ export class Actor {
           }
         }
       }
+      console.log('created blacklist area');
       // If any collision points have been identified, recalculate the path
       if (blacklistArea.length > 0) {
         if (dispenser !== undefined) {
           this.path = this.searcher.calculateShortestPath(this.position, dispenser, blacklistArea);
+          console.log('calculated shortest path with blacklist');
         } else {
           this.path = this.searcher.calculateShortestPath(this.position, this.objective, blacklistArea);
+          console.log('calculated shortest path with blacklist');
         }
       }
       // Now follow the path
       for (let position of this.path) {
         this._move(position);
       }
+      console.log('moved along path');
       // We're next to the goal
       if (dispenser !== undefined) {
         this.takeItem('B');
+        this.simulation.print();
       } else {
         this.placeItem(this.objective);
         // Update objectives list
         delete this.simulation.objectives[this.objective];
         this.sortedObjectives.shift();
         this.objective = this.sortedObjectives.peek();
+        this.simulation.print();
       }
     }
   }
