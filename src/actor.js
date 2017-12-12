@@ -1,6 +1,4 @@
-import {
-  AStarSearch
-} from "./pathfinding/a-star-search.js";
+import { AStarSearch } from "./pathfinding/a-star-search.js";
 import TinyQueue from "tinyqueue";
 
 /**
@@ -25,6 +23,9 @@ import TinyQueue from "tinyqueue";
  *
  * Could store multiple algorithms
  * And optimisations could be things like 'only calculate x moves in front' where x depends
+ *
+ * We might need (want) a 3D array so that we can more easily model an Actor
+ * standing on top of an Objective tile to get to an otherwise-inaccessible Goal
  */
 export class Actor {
   /**
@@ -52,13 +53,17 @@ export class Actor {
     this.path = [];
     // Objective priorities as an array
     // Sorts based on total number of moves required to reach objective from spawn
-    let objectivePriorityQueue = new TinyQueue(this.config.objectives, (a, b) => {
-      return (
-        Math.abs(this.position[0] - a[0]) +
-        Math.abs(this.position[1] - a[1]) -
-        (Math.abs(this.position[0] - b[0]) + Math.abs(this.position[1] - b[1]))
-      );
-    });
+    let objectivePriorityQueue = new TinyQueue(
+      this.config.objectiveSpaces,
+      (a, b) => {
+        return (
+          Math.abs(this.position[0] - a[0]) +
+          Math.abs(this.position[1] - a[1]) -
+          (Math.abs(this.position[0] - b[0]) +
+            Math.abs(this.position[1] - b[1]))
+        );
+      }
+    );
     this.sortedObjectives = [];
     while (objectivePriorityQueue.length > 0) {
       this.sortedObjectives.push(objectivePriorityQueue.pop());
@@ -108,21 +113,34 @@ export class Actor {
    */
   _move(position) {
     let edges = this.getSurroundings();
-    if (edges.positions.includes(position)) {
+    if (arrayHolds(edges.positions, position)) {
       // If we're trying to move into a ground element...
-      if (this.ground.includes(edges.elements[edges.positions.indexOf(position)])) {
+      if (
+        this.config.ground.includes(
+          edges.elements[getArrayIndex(edges.positions, position)]
+        )
+      ) {
         this.simulation.swapElements(this.position, position);
+        this.position = position;
       } else {
-        throw new Error(this.identifier + ' tried to move into an invalid element.');
+        throw new Error(
+          this.identifier + " tried to move into an invalid element."
+        );
       }
     } else {
-      throw new Error(this.identifier + ' tried to move to a position '+ position +' that it was not next to.');
+      throw new Error(
+        this.identifier +
+          " tried to move to a position " +
+          position +
+          " that it was not next to."
+      );
     }
     this.simulation.print();
   }
 
   /**
    * Moves one position in the specified direction, if allowed.
+   * Only used in manual control.
    * @param {String} direction The direction to move in | N,E,S,W
    */
   moveCardinal(direction) {
@@ -174,18 +192,16 @@ export class Actor {
   takeItem(item) {
     if (this.config.items.includes(item)) {
       let edges = this.getSurroundings();
-      for (let edge of edges.elements) {
-        if (edges.includes(item)) {
-          // Lower case indicates an item, rather than a spawner
-          this.item = item.toLowerCase();
-        } else {
-          throw new Error(
-            this.identifier +
+      if (edges.elements.includes(item)) {
+        // Lower case indicates an item, rather than a spawner
+        this._item = item.toLowerCase();
+      } else {
+        throw new Error(
+          this.identifier +
             " tried to take an item: " +
             item +
             " that it was not next to"
-          );
-        }
+        );
       }
     } else {
       throw new Error(
@@ -200,9 +216,9 @@ export class Actor {
    * @param {Array} position The position to place the item in
    */
   placeItem(position) {
-    if (this.item !== undefined) {
-      this.simulation.replaceElement(position, this.item);
-      this.item = undefined;
+    if (this._item !== undefined) {
+      this.simulation.replaceElement(position, this._item);
+      this._item = undefined;
     } else {
       throw new Error(
         this.identifier + " tried to place an item while it was not holding one"
@@ -227,35 +243,53 @@ export class Actor {
     while (this.objective !== undefined) {
       // Check that objective is not the same as another actor
       for (let actor of this.simulation.actors) {
-        if (this.objective === actor.objective && actor.identifier !== this.identifier && this.priority < actor.priority) {
+        if (
+          this.objective === actor.objective &&
+          actor.identifier !== this.identifier &&
+          this.priority < actor.priority
+        ) {
           this.sortedObjectives.shift();
+          // TODO will this immediately cancel the while loop? I doubt it
           this.objective = this.sortedObjectives[0];
         }
       }
-      if (this.item === undefined) { // If we aren't holding an item, go to the nearest resource
+      if (this._item === undefined) {
+        // If we aren't holding an item, go to the nearest resource
         // We sort the resources
-        let distanceSortedDispensers = new TinyQueue(this.simulation.itemSpaces, function (a, b) {
-          return (
-            Math.abs(this.position[0] - a[0]) +
-            Math.abs(this.position[1] - a[1]) -
-            (Math.abs(this.position[0] - b[0]) + Math.abs(this.position[1] - b[1]))
-          );
-        });
+        let distanceSortedDispensers = new TinyQueue(
+          this.simulation.itemSpaces,
+          function(a, b) {
+            return (
+              Math.abs(this.position[0] - a[0]) +
+              Math.abs(this.position[1] - a[1]) -
+              (Math.abs(this.position[0] - b[0]) +
+                Math.abs(this.position[1] - b[1]))
+            );
+          }
+        );
         // Pick the nearest one
         dispenser = distanceSortedDispensers.peek();
-        console.log('calculating shortest path to dispenser');
-        this.path = this.searcher.calculateShortestPath(this.position, dispenser);
-        console.log('calculated shortest path to dispenser');
+        console.log("calculating shortest path to dispenser");
+        this.path = this.searcher.calculateShortestPath(
+          this.position,
+          dispenser
+        );
+        console.log("calculated shortest path to dispenser");
         console.log(this.path);
       } else {
-        console.log('calculating shortest path to objective');
-        this.path = this.searcher.calculateShortestPath(this.position, this.objective);
-        console.log('calculated shortest path to objective');
+        console.log("calculating shortest path to objective");
+        this.path = this.searcher.calculateShortestPath(
+          this.position,
+          this.objective
+        );
+        console.log("calculated shortest path to objective");
         console.log(this.path);
       }
       // Check that there is a path to follow
-      if (this.path.includes(null) || this.path === null) {
-        throw new Error('Path contained null values. Path returned as: ' + this.path);
+      if (this.path === null) {
+        throw new Error(
+          "Path contained null values. Path returned as: " + this.path
+        );
       }
 
       // Check that the path won't cause a collision with another Actor
@@ -263,40 +297,54 @@ export class Actor {
 
       // Holds the positions which this Actor should not travel upon to reach this goal
       let blacklistArea = this.simulation.area;
+      // Will be set to true if we change any tiles
+      let blacklist = false;
       for (let actor of this.simulation.actors) {
         for (let index = 0; index < path.length; index++) {
-          if (this.path[index] === actor.path[index] && this.priority < actor.priority) {
+          if (
+            arraysEqual(this.path[index], actor.path[index]) &&
+            this.priority < actor.priority
+          ) {
             // Set the position as impassable for this Actor
-            blacklistArea[this.path[index][0]][this.path[index][1]] = '/';
+            blacklistArea[this.path[index][0]][this.path[index][1]] = "/";
+            blacklist = true;
           }
         }
       }
-      console.log('created blacklist area');
       // If any collision points have been identified, recalculate the path
-      if (blacklistArea.length > 0) {
+      if (blacklist === true) {
+        console.log("searching blacklist area");
         if (dispenser !== undefined) {
-          this.path = this.searcher.calculateShortestPath(this.position, dispenser, blacklistArea);
-          console.log('calculated shortest path with blacklist');
+          this.path = this.searcher.calculateShortestPath(
+            this.position,
+            dispenser,
+            blacklistArea
+          );
+          console.log("calculated shortest path with blacklist");
         } else {
-          this.path = this.searcher.calculateShortestPath(this.position, this.objective, blacklistArea);
-          console.log('calculated shortest path with blacklist');
+          this.path = this.searcher.calculateShortestPath(
+            this.position,
+            this.objective,
+            blacklistArea
+          );
+          console.log("calculated shortest path with blacklist");
         }
       }
       // Now follow the path
       for (let position of this.path) {
         this._move(position);
       }
-      console.log('moved along path');
+      console.log("moved along path");
       // We're next to the goal
-      if (dispenser !== undefined) {
-        this.takeItem('B');
+      if (this._item === undefined) {
+        this.takeItem("B");
         this.simulation.print();
       } else {
         this.placeItem(this.objective);
         // Update objectives list
         delete this.simulation.objectives[this.objective];
         this.sortedObjectives.shift();
-        this.objective = this.sortedObjectives.peek();
+        this.objective = this.sortedObjectives[0];
         this.simulation.print();
       }
     }
@@ -308,4 +356,68 @@ export class Actor {
   //   this.getPosition()[0] + x,
   //   this.getPosition()[1] + y,
   // ])
+}
+
+/**
+ * Checks whether two arrays are identical.
+ * Code taken from https://stackoverflow.com/questions/4025893/how-to-check-identical-array-in-most-efficient-way
+ * @param {Array} arr1 An array
+ * @param {Array} arr2 Another array
+ */
+function arraysEqual(arr1, arr2) {
+  if (arr1 === undefined || arr2 === undefined) {
+    return false;
+  } else if (arr1.length !== arr2.length) {
+    return false;
+  }
+  for (let i = arr1.length; i--; ) {
+    if (arr1[i] !== arr2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Taken from https://stackoverflow.com/questions/41661287/how-to-check-if-an-array-contains-another-array
+ * Checks if an array contains the given item. Used when the item is an array.
+ * @param {Array} arr  An Array containing Arrays
+ * @param {Array} item An Array which might be contained in arr
+ */
+export function arrayHolds(arr, item) {
+  let itemAsString = JSON.stringify(item);
+  let contains = arr.some(function(ele) {
+    return JSON.stringify(ele) === itemAsString;
+  });
+  return contains;
+}
+
+/**
+ * Returns the index of an array contained within an array, or -1 if not found.
+ * @param  {Array}   containerArray The Array to search in.
+ * @param  {Array}   findArray      The Array to search for.
+ * @return {Integer}                The index of findArray, or -1.
+ */
+export function getArrayIndex(containerArray, findArray) {
+  if (
+    Array.isArray(containerArray) === false ||
+    Array.isArray(findArray) === false
+  ) {
+    throw new Error(
+      "Parameters " +
+        containerArray +
+        " and " +
+        findArray +
+        " must both be Arrays."
+    );
+  }
+  for (let i = containerArray.length; i--; ) {
+    if (
+      JSON.stringify(containerArray[i][0]) === JSON.stringify(findArray[0]) &&
+      JSON.stringify(containerArray[i][1]) === JSON.stringify(findArray[1])
+    ) {
+      return i;
+    }
+  }
+  return -1;
 }

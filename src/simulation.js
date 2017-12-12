@@ -65,7 +65,8 @@ export class Simulation {
         startingPosition: startingPosition,
         items: this.config.itemElements,
         ground: this.config.groundElements,
-        objectives: this.objectiveSpaces,
+        objectives: this.config.objectiveElements,
+        objectiveSpaces: this.objectiveSpaces,
         heuristic: this.config.pathfindingHeuristic,
       };
       let actor = new Actor(actorConfig, this);
@@ -113,7 +114,6 @@ export class Simulation {
     let secondElement = this.area[s[0]][s[1]];
     this.area[f[0]][f[1]] = secondElement;
     this.area[s[0]][s[1]] = firstElement;
-    this.print();
   }
 
   /**
@@ -146,6 +146,9 @@ export class Simulation {
     for (let row of simulationArea) {
       console.log(row);
     }
+    console.log('');
+    console.log('---------------------------------------------------');
+    console.log('');
   }
 }
 

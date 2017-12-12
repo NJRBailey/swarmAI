@@ -1,4 +1,5 @@
 import TinyQueue from "tinyqueue";
+import {arrayHolds} from '../actor';
 // let TinyQueue = require('tinyqueue');
 /**
  * A* needs checks each possible next move (i.e. N,E,S,W) and selects the one which
@@ -20,7 +21,11 @@ import TinyQueue from "tinyqueue";
  * Checks are operated within this class. The Simulation and Actors do not deal with the
  * pathfinding logic.
  *
- * todo figure out recursion
+ * Analysis - some time is wasted in one of the for loops in _calculateNextStep()
+ *          - using the current node as the first step in the path is wasteful
+ *            It would be more efficient to have a for loop for the valid first
+ *            steps - this would be code duplication from the _calculateNextSteps()
+ *            in the calculateShortestPath method however.
  *
  *
  */
@@ -50,59 +55,62 @@ export class AStarSearch {
    * @return {Array}         The list of positions to get to the target
    */
   calculateShortestPath(current, target, area = undefined) {
+    console.log('current: ' + current);
+    console.log('target: ' + target);
     // Set the area to search
     if (area !== undefined) {
       this.area = area;
     } else {
       this.area = this.simulation.area;
     }
-    return this._calculateNextStep([current], target);
+    let currentNode = {
+      position: current,
+      cost: 0
+    };
+    let path = this._calculateNextStep([current], target, currentNode);
+    // Removes the first node from the path - will be the current node
+    path.shift();
+    return path;
   }
 
   /**
    * A recursive function which calculates each step of the path between the current
    * path position and the target position.
    *
-   * @param {Array} path   The path that has been calculated so far
-   * @param {Array} target The target position
-   * @param {Array} [area] The area to search through
+   * @param {Array}  path   The path (list of positions) that has been calculated so far
+   * @param {Array}  target The target position
+   * @param {Object} node   The current position with cost
    */
-  _calculateNextStep(path, target) {
-    let currentNode = path[path.length - 1];
-    console.log('path: ' + path);
-    console.log('currentNode: ' + currentNode);
+  _calculateNextStep(path, target, node) {
+    let currentStep = node.position;
+    console.log("path: " + path);
     // Queue in order of estimated cost
     let orderedQueue = new TinyQueue([], function(a, b) {
       return a.cost - b.cost;
     });
 
-    let tiles = this.getValidEdges(currentNode);
+    let tiles = this.getValidEdges(currentStep);
     // If we are next to the target, we have finished searching
-    console.log("tiles");
-    console.log(tiles);
-    console.log("target");
-    console.log(target);
-    if (tiles.includes(target)) {
-      console.log('Target found, returning path');
+    if (arrayHolds(tiles, target)) {
+      console.log("Target found, returning path");
       return path;
-    } else if (currentNode === target) {
-      throw new Error('Trying to pathfind to the current position.');
-    } else { // We need to search for the next step
+    } else if (currentStep === target) {
+      throw new Error("Trying to pathfind to the current position.");
+    } else {
+      // We need to search for the next step
       // Populate array of tiles from lowest cost to highest cost
       for (let tile of tiles) {
-        // The first tile won't have a cost or position associated with it yet
-        if (tile.cost === undefined) {
-          tile.cost = 0;
-          tile.position = [tile[0], tile[1]];
-        }
-        // let cost = 1 + tile.cost + this.heuristic(currentNode, target);
-        let cost = 1 + tile.cost + this.heuristic(tile.position, target);
+        // TODO refactor so this doesn't need to check the area
+        if (this.actor.config.ground.includes(this.area[tile[0]][tile[1]])) {
+          let tileCost = node.cost + 1;
+          // TODO check the tutorials again and see if you should actually do 1 + tileCost
+          let cost = 1 + tileCost + this.heuristic(tile, target);
 
-        console.log('cost: ' + cost);
-        orderedQueue.push({
-          position: tile,
-          cost: cost
-        });
+          orderedQueue.push({
+            position: tile,
+            cost: cost
+          });
+        }
       }
       // Convert the non-iterable priority queue into an array
       let orderedTiles = [];
@@ -112,34 +120,25 @@ export class AStarSearch {
 
       // Iterate through each step
       for (let tile of orderedTiles) {
-        console.log(tile);
-        if (!path.includes(tile.position)) {
-          console.log('recursing deeper');
-          console.log('tile: ' + JSON.stringify(tile));
+        if (!arrayHolds(path, tile.position)) {
+          console.log("recursing deeper");
           // Add this tile as the next step in the path
           path.push(tile.position);
-          let continuedRoute = this._calculateNextStep(
-            path, // TODO The path should be an array of objects with positions and costs.
-                  // The position and cost can be used on each iteration.
-                  // Then the calculateShortestPath() method can just grab the positions from the returned path
-                  // Alternatively pass a path, a target, and a current node (node has the cost, path gets added to)
-                  // But easier to get working due to way it's written with first solution
-            target
-          );
+          let continuedRoute = this._calculateNextStep(path, target, tile);
           if (continuedRoute !== null) {
-            console.log('returned route was not null, returning path');
+            console.log("returned route was not null, returning path");
             return continuedRoute;
           }
           path.pop();
         }
       }
-      console.log('all possible routes from the current tile returned null');
+      console.log("all possible routes from the current tile returned null");
       return null;
     }
   }
 
   /**
-   * Returns the positions of the ground tiles around the specified tile
+   * Returns the positions of the ground and goal tiles around the specified tile
    * @param {Array} position The position
    * @return {Array} The ground tiles
    */
@@ -161,7 +160,13 @@ export class AStarSearch {
     };
     let validEdges = [];
     for (let index = 0; index < edges.elements.length; index++) {
-      if (this.actor.config.ground.includes(edges.elements[index])) {
+      console.log('objectives: ' + this.actor.config.objectives);
+      console.log('element: ' + edges.elements[index]);
+      if (
+        this.actor.config.ground.includes(edges.elements[index]) ||
+        this.actor.config.items.includes(edges.elements[index]) ||
+        this.actor.config.objectives.includes(edges.elements[index])
+      ) {
         validEdges.push(edges.positions[index]);
       }
     }
@@ -175,6 +180,8 @@ export class AStarSearch {
         this.actor.identifier + " is being blocked in by another Actor"
       );
     }
+    console.log(JSON.stringify(validEdges));
     return validEdges;
   }
 }
+
