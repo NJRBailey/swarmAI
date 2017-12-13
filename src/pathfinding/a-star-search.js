@@ -55,8 +55,6 @@ export class AStarSearch {
    * @return {Array}         The list of positions to get to the target
    */
   calculateShortestPath(current, target, area = undefined) {
-    console.log('current: ' + current);
-    console.log('target: ' + target);
     // Set the area to search
     if (area !== undefined) {
       this.area = area;
@@ -65,7 +63,8 @@ export class AStarSearch {
     }
     let currentNode = {
       position: current,
-      cost: 0
+      cost: 0,
+      pathCost: 0,
     };
     let path = this._calculateNextStep([current], target, currentNode);
     // Removes the first node from the path - will be the current node
@@ -83,7 +82,6 @@ export class AStarSearch {
    */
   _calculateNextStep(path, target, node) {
     let currentStep = node.position;
-    console.log("path: " + path);
     // Queue in order of estimated cost
     let orderedQueue = new TinyQueue([], function(a, b) {
       return a.cost - b.cost;
@@ -92,7 +90,6 @@ export class AStarSearch {
     let tiles = this.getValidEdges(currentStep);
     // If we are next to the target, we have finished searching
     if (arrayHolds(tiles, target)) {
-      console.log("Target found, returning path");
       return path;
     } else if (currentStep === target) {
       throw new Error("Trying to pathfind to the current position.");
@@ -102,13 +99,14 @@ export class AStarSearch {
       for (let tile of tiles) {
         // TODO refactor so this doesn't need to check the area
         if (this.actor.config.ground.includes(this.area[tile[0]][tile[1]])) {
-          let tileCost = node.cost + 1;
-          // TODO check the tutorials again and see if you should actually do 1 + tileCost
-          let cost = 1 + tileCost + this.heuristic(tile, target);
+          // move cost + previous node cost + heuristic
+          let pathCost = 1 + node.pathCost;
+          let cost = pathCost + this.heuristic(tile, target);
 
           orderedQueue.push({
             position: tile,
-            cost: cost
+            cost: cost,
+            pathCost: pathCost,
           });
         }
       }
@@ -121,18 +119,15 @@ export class AStarSearch {
       // Iterate through each step
       for (let tile of orderedTiles) {
         if (!arrayHolds(path, tile.position)) {
-          console.log("recursing deeper");
           // Add this tile as the next step in the path
           path.push(tile.position);
           let continuedRoute = this._calculateNextStep(path, target, tile);
           if (continuedRoute !== null) {
-            console.log("returned route was not null, returning path");
             return continuedRoute;
           }
           path.pop();
         }
       }
-      console.log("all possible routes from the current tile returned null");
       return null;
     }
   }
@@ -160,8 +155,6 @@ export class AStarSearch {
     };
     let validEdges = [];
     for (let index = 0; index < edges.elements.length; index++) {
-      console.log('objectives: ' + this.actor.config.objectives);
-      console.log('element: ' + edges.elements[index]);
       if (
         this.actor.config.ground.includes(edges.elements[index]) ||
         this.actor.config.items.includes(edges.elements[index]) ||
@@ -180,7 +173,6 @@ export class AStarSearch {
         this.actor.identifier + " is being blocked in by another Actor"
       );
     }
-    console.log(JSON.stringify(validEdges));
     return validEdges;
   }
 }

@@ -139,6 +139,19 @@ export class Simulation {
   }
 
   /**
+   * Interrupts the interval for an Actor when another Actor has forced priority
+   * @param {String} actorId The ID for the Actor being interrupted
+   */
+  interruptInterval(actorId) {
+    for (let actor of this.actors) {
+      if (actor.identifier === actorId) {
+        clearInterval(actor.interval);
+        actor.activate(actor.time);
+      }
+    }
+  }
+
+  /**
    * Prints the simulation map (for a terminal game)
    */
   print() {

@@ -41,17 +41,28 @@ export class Actor {
     this.identifier = config.identifier;
     this.priority = config.priority;
     this.simulation = simulation;
-    // Whether the Actor should be performing tasks
-    this.active = true;
+
     // Whether the Actor is carrying an item
     this._item = undefined;
     // The position of the Actor
     this.position = config.startingPosition;
     // The current objective position of the Actor
     this.objective = undefined;
+    // Will be set to the nearest item dispenser
+    this.dispenser = undefined;
+
+    // The interval for when this Actor is activated
+    this.interval = undefined;
+    // The time for the interval
+    this.time = undefined;
+
     // The current path of the Actor
     this.path = [];
+    // The current status of the Actor
+    this.status = "inactive";
+
     // Objective priorities as an array
+    this.sortedObjectives = [];
     // Sorts based on total number of moves required to reach objective from spawn
     let objectivePriorityQueue = new TinyQueue(
       this.config.objectiveSpaces,
@@ -64,7 +75,6 @@ export class Actor {
         );
       }
     );
-    this.sortedObjectives = [];
     while (objectivePriorityQueue.length > 0) {
       this.sortedObjectives.push(objectivePriorityQueue.pop());
     }
@@ -231,9 +241,6 @@ export class Actor {
    * Pathfind to goal
    */
   navigate() {
-    // Will be set to the nearest item dispenser
-    let dispenser;
-
     this.searcher = new AStarSearch(
       this.simulation,
       this,
@@ -250,12 +257,14 @@ export class Actor {
         ) {
           this.sortedObjectives.shift();
           // TODO will this immediately cancel the while loop? I doubt it
+          // console.log('should fire');
           this.objective = this.sortedObjectives[0];
+          // console.log('should NOT fire');
         }
       }
       if (this._item === undefined) {
-        // If we aren't holding an item, go to the nearest resource
-        // We sort the resources
+        // If we aren't holding an item, go to the nearest dispenser
+        // We sort the dispensers
         let distanceSortedDispensers = new TinyQueue(
           this.simulation.itemSpaces,
           function(a, b) {
@@ -268,11 +277,11 @@ export class Actor {
           }
         );
         // Pick the nearest one
-        dispenser = distanceSortedDispensers.peek();
+        this.dispenser = distanceSortedDispensers.peek();
         console.log("calculating shortest path to dispenser");
         this.path = this.searcher.calculateShortestPath(
           this.position,
-          dispenser
+          this.dispenser
         );
         console.log("calculated shortest path to dispenser");
         console.log(this.path);
@@ -314,10 +323,10 @@ export class Actor {
       // If any collision points have been identified, recalculate the path
       if (blacklist === true) {
         console.log("searching blacklist area");
-        if (dispenser !== undefined) {
+        if (this.dispenser !== undefined) {
           this.path = this.searcher.calculateShortestPath(
             this.position,
-            dispenser,
+            this.dispenser,
             blacklistArea
           );
           console.log("calculated shortest path with blacklist");
@@ -350,12 +359,188 @@ export class Actor {
     }
   }
 
-  // Calculate where to place algorithm
-  // case for each direction
-  // this.placeItem([
-  //   this.getPosition()[0] + x,
-  //   this.getPosition()[1] + y,
-  // ])
+  /**
+   * Activates the Actor so it will keep performing tasks if it has any.
+   * Tasks include:
+   *  - moving
+   *  - picking up items
+   *  - placing items
+   *
+   * @param {Integer} time Time in ms between each task
+   */
+  activate(time = 500) {
+    this.time = time;
+    // Check that we have tasks to perform
+    if (this.sortedObjectives.length > 0) {
+      if (this.path.length === 0) {
+        this.path = this.calculateNewPath();
+      }
+      // If we aren't next to the goal we have to move
+      if (this.path.length > 0) {
+        this.status = "moving";
+      } else if (this._item === undefined) {
+        this.status === "retrieving";
+      } else {
+        this.status === "placing";
+      }
+      // This interval will be cleared by the Actor placing an item, or by being interrupted by a
+      // higher priority Actor.
+      this.interval = setInterval(() => {
+        this.operate();
+      }, time);
+    }
+  }
+
+  /**
+   * Performs a task and sets the Actor ready for the next operation.
+   */
+  operate() {
+    switch (this.status) {
+      case "moving":
+        this._move(this.path[0]);
+        this.path.shift();
+        if (this.path.length === 0) {
+          if (this._item === undefined) {
+            this.status = "retrieving";
+          } else {
+            this.status = "placing";
+          }
+        }
+        break;
+      case "retrieving":
+        this.takeItem("B");
+        let surroundings = this.getSurroundings();
+        if (arrayHolds(surroundings.positions, this.objective)) {
+          this.status = "placing";
+        } else {
+          this.status = "inactive";
+          clearInterval(this.interval);
+          this.interval = undefined;
+          // Automatically reactivate while there are still objectives to complete
+          if (this.objective !== undefined) {
+            this.activate(this.time);
+          }
+        }
+        break;
+      case "placing":
+        this.placeItem(this.objective);
+        this.sortedObjectives.shift();
+        this.objective = this.sortedObjectives[0];
+        this.status = "inactive";
+        clearInterval(this.interval);
+        this.interval = undefined;
+        // Automatically reactivate while there are still objectives to complete
+        if (this.objective !== undefined) {
+          this.activate(this.time);
+        }
+        break;
+    }
+  }
+
+  /**
+   * Finds a new path and returns it
+   */
+  calculateNewPath() {
+    // We will return path at the end. It will be set to the calculated path.
+    let path;
+
+    this.searcher = new AStarSearch(
+      this.simulation,
+      this,
+      this.config.heuristic
+    );
+    this.objective = this.sortedObjectives[0];
+    // Check that objective is not the same as another actor
+    for (let actor of this.simulation.actors) {
+      // If two objectives are the same and this Actor has a lower priority
+      if (
+        this.objective === actor.objective &&
+        actor.identifier !== this.identifier &&
+        this.priority < actor.priority &&
+        actor.interval !== undefined
+      ) {
+        this.sortedObjectives.shift();
+        this.objective = this.sortedObjectives[0];
+      } else if (
+        this.objective === actor.objective &&
+        actor.identifier !== this.identifier &&
+        actor.interval !== undefined
+      ) {
+        this.simulation.interruptInterval(actor.identifier);
+      }
+    }
+    if (this.objective !== undefined) {
+      if (this._item === undefined) {
+        // If we aren't holding an item, go to the nearest dispenser
+        // We sort the dispensers
+        let distanceSortedDispensers = new TinyQueue(
+          this.simulation.itemSpaces,
+          function(a, b) {
+            return (
+              Math.abs(this.position[0] - a[0]) +
+              Math.abs(this.position[1] - a[1]) -
+              (Math.abs(this.position[0] - b[0]) +
+                Math.abs(this.position[1] - b[1]))
+            );
+          }
+        );
+        // Pick the nearest one
+        this.dispenser = distanceSortedDispensers.peek();
+        path = this.searcher.calculateShortestPath(
+          this.position,
+          this.dispenser
+        );
+      } else {
+        path = this.searcher.calculateShortestPath(
+          this.position,
+          this.objective
+        );
+      }
+      // Check that there is a path to follow
+      if (path === null) {
+        throw new Error(
+          "Path contained null values. Path returned as: " + path
+        );
+      }
+
+      // Check that the path won't cause a collision with another Actor
+      // If it will, recalculate with that tile blacklisted, and repeat until there will be no collisions
+
+      // Holds the positions which this Actor should not travel upon to reach this goal
+      let blacklistArea = this.simulation.area;
+      // Will be set to true if we change any tiles
+      let blacklist = false;
+      for (let actor of this.simulation.actors) {
+        for (let index = 0; index < path.length; index++) {
+          if (
+            arraysEqual(path[index], actor.path[index]) &&
+            this.priority < actor.priority
+          ) {
+            // Set the position as impassable for this Actor
+            blacklistArea[path[index][0]][path[index][1]] = "/";
+            blacklist = true;
+          }
+        }
+      }
+      // If any collision points have been identified, recalculate the path
+      if (blacklist === true) {
+        if (this.dispenser !== undefined) {
+          path = this.searcher.calculateShortestPath(
+            this.position,
+            this.dispenser,
+            blacklistArea
+          );
+        } else {
+          path = this.searcher.calculateShortestPath(
+            this.position,
+            this.objective,
+            blacklistArea
+          );
+        }
+      }
+      return path;
+    }
+  }
 }
 
 /**
