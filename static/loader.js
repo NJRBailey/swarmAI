@@ -153,6 +153,7 @@ var Actor = exports.Actor = function () {
 
     this.config = config;
     this.identifier = config.identifier;
+    // TODO find a new word for priority. Priority seems like higher is more important (it should be lower is more important).
     this.priority = config.priority;
     this.simulation = simulation;
 
@@ -1097,7 +1098,9 @@ var Simulation = exports.Simulation = function () {
         var objective = _step.value;
 
         this.objectiveSpaces = this.objectiveSpaces.concat(this._findPosition(objective));
+        console.log(this.objectiveSpaces);
       }
+
       // Stores the objective locations as an object to prevent removal race conditions
     } catch (err) {
       _didIteratorError = true;
@@ -1173,6 +1176,8 @@ var Simulation = exports.Simulation = function () {
     for (var i = 0; i < this.config.actorCount; i++) {
       var actorDetails = this.config.actorDetails[i];
       var startingPosition = actorPositions[i];
+      // Take a deep copy of the objective spaces
+      var objectiveSpaces = Array.from(this.objectiveSpaces);
       // Compile the rules the Actor will need
       var actorConfig = {
         identifier: actorDetails.identifier,
@@ -1181,7 +1186,7 @@ var Simulation = exports.Simulation = function () {
         items: this.config.itemElements,
         ground: this.config.groundElements,
         objectives: this.config.objectiveElements,
-        objectiveSpaces: this.objectiveSpaces,
+        objectiveSpaces: objectiveSpaces,
         heuristic: this.config.pathfindingHeuristic
       };
       var actor = new _actor.Actor(actorConfig, this);

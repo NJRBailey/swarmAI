@@ -41,7 +41,9 @@ export class Simulation {
     this.objectiveSpaces = [];
     for (let objective of this.config.objectiveElements) {
       this.objectiveSpaces = this.objectiveSpaces.concat(this._findPosition(objective));
+      console.log(this.objectiveSpaces);
     }
+
     // Stores the objective locations as an object to prevent removal race conditions
     this.objectives = {};
     for (let position of this.objectiveSpaces) {
@@ -58,6 +60,8 @@ export class Simulation {
     for (let i = 0; i < this.config.actorCount; i++) {
       let actorDetails = this.config.actorDetails[i];
       let startingPosition = actorPositions[i];
+      // Take a deep copy of the objective spaces
+      let objectiveSpaces = Array.from(this.objectiveSpaces);
       // Compile the rules the Actor will need
       let actorConfig = {
         identifier: actorDetails.identifier,
@@ -66,7 +70,7 @@ export class Simulation {
         items: this.config.itemElements,
         ground: this.config.groundElements,
         objectives: this.config.objectiveElements,
-        objectiveSpaces: this.objectiveSpaces,
+        objectiveSpaces: objectiveSpaces,
         heuristic: this.config.pathfindingHeuristic,
       };
       let actor = new Actor(actorConfig, this);

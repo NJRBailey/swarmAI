@@ -153,6 +153,7 @@ var Actor = exports.Actor = function () {
 
     this.config = config;
     this.identifier = config.identifier;
+    // TODO find a new word for priority. Priority seems like higher is more important (it should be lower is more important).
     this.priority = config.priority;
     this.simulation = simulation;
 
