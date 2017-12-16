@@ -1,4 +1,6 @@
-import { AStarSearch } from "./pathfinding/a-star-search.js";
+import {
+  AStarSearch
+} from "./pathfinding/a-star-search.js";
 import TinyQueue from "tinyqueue";
 
 /**
@@ -26,6 +28,13 @@ import TinyQueue from "tinyqueue";
  *
  * We might need (want) a 3D array so that we can more easily model an Actor
  * standing on top of an Objective tile to get to an otherwise-inaccessible Goal
+ *
+ * Recalculating the path if there's an Actor in the way is probably massive overkill
+ * A better solution would be to wait for the Actor to move. However if two Actors were
+ * trying to get past each other in a narrow chokepoint, there would have to be a priority
+ * challenge, with a pathfind to back up out of the way of the greater priority
+ * 
+ * It would probabky be better to have the actual Acotr moving about, rather than an 'A'
  */
 export class Actor {
   /**
@@ -39,7 +48,6 @@ export class Actor {
   constructor(config, simulation) {
     this.config = config;
     this.identifier = config.identifier;
-    // TODO find a new word for priority. Priority seems like higher is more important (it should be lower is more important).
     this.priority = config.priority;
     this.simulation = simulation;
 
@@ -141,9 +149,9 @@ export class Actor {
     } else {
       throw new Error(
         this.identifier +
-          " tried to move to a position " +
-          position +
-          " that it was not next to."
+        " tried to move to a position " +
+        position +
+        " that it was not next to."
       );
     }
     this.simulation.print();
@@ -209,9 +217,9 @@ export class Actor {
       } else {
         throw new Error(
           this.identifier +
-            " tried to take an item: " +
-            item +
-            " that it was not next to"
+          " tried to take an item: " +
+          item +
+          " that it was not next to"
         );
       }
     } else {
@@ -236,128 +244,6 @@ export class Actor {
       );
     }
     this.simulation.print();
-  }
-
-  /**
-   * Pathfind to goal
-   */
-  navigate() {
-    this.searcher = new AStarSearch(
-      this.simulation,
-      this,
-      this.config.heuristic
-    );
-    this.objective = this.sortedObjectives[0];
-    while (this.objective !== undefined) {
-      // Check that objective is not the same as another actor
-      for (let actor of this.simulation.actors) {
-        if (
-          this.objective === actor.objective &&
-          actor.identifier !== this.identifier &&
-          this.priority < actor.priority
-        ) {
-          this.sortedObjectives.shift();
-          // TODO will this immediately cancel the while loop? I doubt it
-          // console.log('should fire');
-          this.objective = this.sortedObjectives[0];
-          // console.log('should NOT fire');
-        }
-      }
-      if (this._item === undefined) {
-        // If we aren't holding an item, go to the nearest dispenser
-        // We sort the dispensers
-        let distanceSortedDispensers = new TinyQueue(
-          this.simulation.itemSpaces,
-          function(a, b) {
-            return (
-              Math.abs(this.position[0] - a[0]) +
-              Math.abs(this.position[1] - a[1]) -
-              (Math.abs(this.position[0] - b[0]) +
-                Math.abs(this.position[1] - b[1]))
-            );
-          }
-        );
-        // Pick the nearest one
-        this.dispenser = distanceSortedDispensers.peek();
-        console.log("calculating shortest path to dispenser");
-        this.path = this.searcher.calculateShortestPath(
-          this.position,
-          this.dispenser
-        );
-        console.log("calculated shortest path to dispenser");
-        console.log(this.path);
-      } else {
-        console.log("calculating shortest path to objective");
-        this.path = this.searcher.calculateShortestPath(
-          this.position,
-          this.objective
-        );
-        console.log("calculated shortest path to objective");
-        console.log(this.path);
-      }
-      // Check that there is a path to follow
-      if (this.path === null) {
-        throw new Error(
-          "Path contained null values. Path returned as: " + this.path
-        );
-      }
-
-      // Check that the path won't cause a collision with another Actor
-      // If it will, recalculate with that tile blacklisted, and repeat until there will be no collisions
-
-      // Holds the positions which this Actor should not travel upon to reach this goal
-      let blacklistArea = this.simulation.area;
-      // Will be set to true if we change any tiles
-      let blacklist = false;
-      for (let actor of this.simulation.actors) {
-        for (let index = 0; index < path.length; index++) {
-          if (
-            arraysEqual(this.path[index], actor.path[index]) &&
-            this.priority < actor.priority
-          ) {
-            // Set the position as impassable for this Actor
-            blacklistArea[this.path[index][0]][this.path[index][1]] = "/";
-            blacklist = true;
-          }
-        }
-      }
-      // If any collision points have been identified, recalculate the path
-      if (blacklist === true) {
-        console.log("searching blacklist area");
-        if (this.dispenser !== undefined) {
-          this.path = this.searcher.calculateShortestPath(
-            this.position,
-            this.dispenser,
-            blacklistArea
-          );
-          console.log("calculated shortest path with blacklist");
-        } else {
-          this.path = this.searcher.calculateShortestPath(
-            this.position,
-            this.objective,
-            blacklistArea
-          );
-          console.log("calculated shortest path with blacklist");
-        }
-      }
-      // Now follow the path
-      for (let position of this.path) {
-        this._move(position);
-      }
-      console.log("moved along path");
-      // We're next to the goal
-      if (this._item === undefined) {
-        this.takeItem("B");
-        this.simulation.print();
-      } else {
-        this.placeItem(this.objective);
-        // Update objectives list
-        delete this.simulation.objectives[this.objective];
-        this.sortedObjectives.shift();
-        this.objective = this.sortedObjectives[0];
-        this.simulation.print();
-      }
-    }
   }
 
   /**
@@ -398,14 +284,46 @@ export class Actor {
   operate() {
     switch (this.status) {
       case "moving":
-        this._move(this.path[0]);
-        this.path.shift();
-        if (this.path.length === 0) {
-          if (this._item === undefined) {
-            this.status = "retrieving";
-          } else {
-            this.status = "placing";
+        // Check that the path is clear - if not we will recalculate the path
+        if (
+          this.config.ground.includes(this.simulation.getElement(this.path[0]))
+        ) {
+          this._move(this.path[0]);
+          this.path.shift();
+          if (this.path.length === 0) {
+            if (this._item === undefined) {
+              this.status = "retrieving";
+            } else {
+              this.status = "placing";
+            }
           }
+          // Thids doesn;t work becaus of lower case 'a' not swithcing abck to 'A'
+        } else if (this.simulation.getElement(this.path[0]) === 'A') {
+          console.log('Actor is blocking ' + this.identifier);
+          // Find the Actor that's in the way, and perform a priority challenge.
+          // If it loses the challenge, we recalculate. If it wins, wait one tick.
+          for (let actor of this.simulation.actors) {
+            console.log('entered loop');
+            console.log('actor pos: ' + actor.position);
+            console.log('this path: ' + this.path[0]);
+            if (actor.position === this.path[0]) {
+              console.log('Blocking actor is ' + actor.identifier);
+              console.log('this priority: ' + this.priority + ', actor priority: ' + actor.priority);
+              if (this.priority < actor.priority) {
+                this.status = "inactive";
+                clearInterval(this.interval);
+                this.interval = undefined;
+                // Automatically reactivates to calculate an alternate route
+                this.activate(this.time);
+              }
+            }
+          }
+        } else {
+          this.status = "inactive";
+          clearInterval(this.interval);
+          this.interval = undefined;
+          // Automatically reactivates to calculate an alternate route
+          this.activate(this.time);
         }
         break;
       case "retrieving":
@@ -470,13 +388,17 @@ export class Actor {
         this.simulation.interruptInterval(actor.identifier);
       }
     }
+    // Calculate a path to either a dispenser or an objective
     if (this.objective !== undefined) {
+      // Replace the Actor's position with a temporary 'clear' value
+      let actorArea = Array.from(this.simulation.area);
+      replaceElement(actorArea, this.position, 'a');
       if (this._item === undefined) {
         // If we aren't holding an item, go to the nearest dispenser
         // We sort the dispensers
         let distanceSortedDispensers = new TinyQueue(
           this.simulation.itemSpaces,
-          function(a, b) {
+          function (a, b) {
             return (
               Math.abs(this.position[0] - a[0]) +
               Math.abs(this.position[1] - a[1]) -
@@ -489,12 +411,14 @@ export class Actor {
         this.dispenser = distanceSortedDispensers.peek();
         path = this.searcher.calculateShortestPath(
           this.position,
-          this.dispenser
+          this.dispenser,
+          actorArea,
         );
       } else {
         path = this.searcher.calculateShortestPath(
           this.position,
-          this.objective
+          this.objective,
+          actorArea,
         );
       }
       // Check that there is a path to follow
@@ -508,7 +432,7 @@ export class Actor {
       // If it will, recalculate with that tile blacklisted, and repeat until there will be no collisions
 
       // Holds the positions which this Actor should not travel upon to reach this goal
-      let blacklistArea = this.simulation.area;
+      let blacklistArea = actorArea;
       // Will be set to true if we change any tiles
       let blacklist = false;
       for (let actor of this.simulation.actors) {
@@ -539,6 +463,8 @@ export class Actor {
           );
         }
       }
+      replaceElement(actorArea, this.position, 'A');
+      console.log(path);
       return path;
     }
   }
@@ -556,7 +482,7 @@ function arraysEqual(arr1, arr2) {
   } else if (arr1.length !== arr2.length) {
     return false;
   }
-  for (let i = arr1.length; i--; ) {
+  for (let i = arr1.length; i--;) {
     if (arr1[i] !== arr2[i]) {
       return false;
     }
@@ -572,7 +498,7 @@ function arraysEqual(arr1, arr2) {
  */
 export function arrayHolds(arr, item) {
   let itemAsString = JSON.stringify(item);
-  let contains = arr.some(function(ele) {
+  let contains = arr.some(function (ele) {
     return JSON.stringify(ele) === itemAsString;
   });
   return contains;
@@ -591,13 +517,13 @@ export function getArrayIndex(containerArray, findArray) {
   ) {
     throw new Error(
       "Parameters " +
-        containerArray +
-        " and " +
-        findArray +
-        " must both be Arrays."
+      containerArray +
+      " and " +
+      findArray +
+      " must both be Arrays."
     );
   }
-  for (let i = containerArray.length; i--; ) {
+  for (let i = containerArray.length; i--;) {
     if (
       JSON.stringify(containerArray[i][0]) === JSON.stringify(findArray[0]) &&
       JSON.stringify(containerArray[i][1]) === JSON.stringify(findArray[1])
@@ -606,4 +532,15 @@ export function getArrayIndex(containerArray, findArray) {
     }
   }
   return -1;
+}
+
+/**
+ * Replaces the element currently in the position with the new element
+ * @param {Array}  area       The area we're operating in
+ * @param {Array}  position   The position to replace an element at
+ * @param {String} newElement The element to replace with
+ */
+export function replaceElement(area, position, newElement) {
+  console.log(area);
+  area[position[0]][position[1]] = newElement;
 }

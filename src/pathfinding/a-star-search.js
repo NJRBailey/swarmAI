@@ -1,5 +1,7 @@
 import TinyQueue from "tinyqueue";
-import {arrayHolds} from '../actor';
+import {
+  arrayHolds
+} from '../actor';
 // let TinyQueue = require('tinyqueue');
 /**
  * A* needs checks each possible next move (i.e. N,E,S,W) and selects the one which
@@ -61,74 +63,67 @@ export class AStarSearch {
     } else {
       this.area = this.simulation.area;
     }
+    // The node we will start searching from
     let currentNode = {
       position: current,
       cost: 0,
-      pathCost: 0,
+      previous: null,
     };
-    let path = this._calculateNextStep([current], target, currentNode);
-    // Removes the first node from the path - will be the current node
-    path.shift();
-    return path;
+    // The node we are searching for
+    this.target = target;
+    // Tracks the currently active nodes
+    this.activeNodes = new TinyQueue([currentNode], function (a, b) {
+      return (a.cost - b.cost);
+    });
+    // Tracks the already-checked nodes
+    this.checkedPositions = [];
+
+    // Will keep expanding nodes until the target is the best node, or all nodes have been expanded
+    this._findBestPath();
+    //TODO this.activeNodes is blank at this point - why?
+    // Constructs the path by tracing the previousNode pointers back to the start
+    this.path = [];
+    this._constructPath(this.activeNodes.peek());
+
+    return this.path;
   }
 
-  /**
-   * A recursive function which calculates each step of the path between the current
-   * path position and the target position.
-   *
-   * @param {Array}  path   The path (list of positions) that has been calculated so far
-   * @param {Array}  target The target position
-   * @param {Object} node   The current position with cost
-   */
-  _calculateNextStep(path, target, node) {
-    let currentStep = node.position;
-    // Queue in order of estimated cost
-    let orderedQueue = new TinyQueue([], function(a, b) {
-      return a.cost - b.cost;
-    });
+  _findBestPath() {
+    // If the best node is not the target node, we continue searching
+    let bestNode = this.activeNodes.peek();
+    if (bestNode !== undefined) {
+      if (bestNode.position !== this.target) {
+        this._exploreNode(bestNode);
+      }
+    }
+  }
 
-    let tiles = this.getValidEdges(currentStep);
-    // If we are next to the target, we have finished searching
-    if (arrayHolds(tiles, target)) {
-      return path;
-    } else if (currentStep === target) {
-      throw new Error("Trying to pathfind to the current position.");
-    } else {
-      // We need to search for the next step
-      // Populate array of tiles from lowest cost to highest cost
-      for (let tile of tiles) {
-        // TODO refactor so this doesn't need to check the area
-        if (this.actor.config.ground.includes(this.area[tile[0]][tile[1]])) {
-          // move cost + previous node cost + heuristic
-          let pathCost = 1 + node.pathCost;
-          let cost = pathCost + this.heuristic(tile, target);
+  _exploreNode(node) {
+    // Remove this node from the list of active nodes
+    this.activeNodes.pop();
+    this.checkedPositions.push(node.position);
+    let edges = this.getValidNextEdgePositions(node.position)
+    for (let edge of edges) {
+      let nextNode = {
+        position: edge,
+        cost: 1 + node.cost + this.heuristic(edge, this.target),
+        previous: node,
+      };
+      this.activeNodes.push(nextNode);
+    }
+    this._findBestPath();
+  }
 
-          orderedQueue.push({
-            position: tile,
-            cost: cost,
-            pathCost: pathCost,
-          });
+  _constructPath(node) {
+    // If node is undefined, there is no valid path to the target
+    if (node !== undefined) {
+      if (node.previous !== null) {
+        // We don't want to add the target to our path, as we will only navigate next to a target
+        if (node.position !== this.target) {
+          this.path.unshift(node.position);
         }
+        this._constructPath(node.previous);
       }
-      // Convert the non-iterable priority queue into an array
-      let orderedTiles = [];
-      while (orderedQueue.length > 0) {
-        orderedTiles.push(orderedQueue.pop());
-      }
-
-      // Iterate through each step
-      for (let tile of orderedTiles) {
-        if (!arrayHolds(path, tile.position)) {
-          // Add this tile as the next step in the path
-          path.push(tile.position);
-          let continuedRoute = this._calculateNextStep(path, target, tile);
-          if (continuedRoute !== null) {
-            return continuedRoute;
-          }
-          path.pop();
-        }
-      }
-      return null;
     }
   }
 
@@ -137,8 +132,7 @@ export class AStarSearch {
    * @param {Array} position The position
    * @return {Array} The ground tiles
    */
-  getValidEdges(position) {
-    // let edges = this.actor.getSurroundings();
+  getValidNextEdgePositions(position) {
     let edges = {
       elements: [
         this.area[position[0] - 1][position[1]], // North
@@ -153,21 +147,25 @@ export class AStarSearch {
         [position[0], position[1] - 1]
       ]
     };
+    window.validEdges = edges;
     let validEdges = [];
     for (let index = 0; index < edges.elements.length; index++) {
       if (
-        this.actor.config.ground.includes(edges.elements[index]) ||
-        this.actor.config.items.includes(edges.elements[index]) ||
-        this.actor.config.objectives.includes(edges.elements[index])
+        (this.actor.config.ground.includes(edges.elements[index]) ||
+          this.actor.config.items.includes(edges.elements[index]) ||
+          this.actor.config.objectives.includes(edges.elements[index]) ||
+          edges.elements[index] === 'a') &&
+        !arrayHolds(this.checkedPositions, edges.positions[index])
       ) {
         validEdges.push(edges.positions[index]);
       }
     }
-    if (validEdges.length === 0 && !edges.elements.includes("A")) {
+    // We check if any of the invalid edges were checked before - if they were, we want to return an empty array to indicate the fact
+    if (validEdges.length === 0 && !edges.elements.includes("A") && !arrayHoldsAny(this.checkedPositions, edges.positions)) {
       throw new Error(
         this.actor.identifier + " is surrounded by immovable objects"
       );
-    } else if (validEdges.length === 0) {
+    } else if (validEdges.length === 0 && !arrayHoldsAny(this.checkedPositions, edges.positions)) {
       // There is an actor blocking us in
       throw new Error(
         this.actor.identifier + " is being blocked in by another Actor"
@@ -177,3 +175,18 @@ export class AStarSearch {
   }
 }
 
+/**
+ * Checks if an Array holds any of the arrays contained in the items parameter
+ * @param  {Array}   arr   The Array we are checking
+ * @param  {Array}   items An Array of Arrays
+ * @return {Boolean}
+ */
+function arrayHoldsAny(arr, items) {
+  for (let item of items) {
+    let holds = arrayHolds(arr, item);
+    if (holds === true) {
+      return true;
+    }
+  }
+  return false;
+}

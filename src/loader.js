@@ -7,12 +7,12 @@ let rules = {
   actorDetails: [
     {
       identifier: 'boss',
-      priority: 0,
+      priority: 1,
     },
     {
       identifier: 'newkid',
-      priority: 1,
-    },
+      priority: 0,
+    }
   ],
   // The elements Actors are allowed to move onto
   groundElements: ['_'],

@@ -24,8 +24,7 @@ export class Simulation {
 
     window.testQueue = new TinyQueue([], function(a, b) {
       return (
-        (Math.abs(1 - a[0]) + Math.abs(1 - a[1]))
-        - (Math.abs(1 - b[0]) + Math.abs(1 - b[1]))
+        a.cost - b.cost
       );
     });
 
@@ -75,7 +74,7 @@ export class Simulation {
       };
       let actor = new Actor(actorConfig, this);
       // Creates an entry in the actors and paths Objects with identifier as the key
-      this.actors.push = actor;
+      this.actors.push(actor);
       this.paths[actorDetails.identifier] = [];
     }
   }
