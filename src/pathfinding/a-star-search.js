@@ -71,8 +71,6 @@ export class AStarSearch {
     };
     // The node we are searching for
     this.target = target;
-    console.log('target:');
-    console.log(this.target);
     // Tracks the currently active nodes
     this.activeNodes = new TinyQueue([currentNode], function (a, b) {
       return a.cost - b.cost;
@@ -86,34 +84,22 @@ export class AStarSearch {
     // Constructs the path by tracing the previousNode pointers back to the start
     this.path = [];
     this._constructPath(this.activeNodes.peek());
-    console.log(JSON.stringify(this.path));
     return this.path;
   }
 
   _findBestPath() {
     // If the best node is not the target node, we continue searching
     let bestNode = this.activeNodes.peek();
-    console.log('this.activeNodes: ');
-    console.log(this.activeNodes.data);
-    console.log('bestNode: ');
-    console.log(bestNode);
     if (bestNode !== undefined) {
       if (!arraysEqual(bestNode.position, this.target)) {
         this._exploreNode(bestNode);
-      } else {
-        console.log('best node is target node');
       }
     }
-    console.log('best node was undefined');
   }
 
   _exploreNode(node) {
     // Remove this node from the list of active nodes
-    console.log('exploring node: ');
-    console.log(node);
     this.activeNodes.pop();
-    console.log('activeNodes: ');
-    console.log(this.activeNodes.data);
     this.checkedPositions.push(node.position);
     let edges = this.getValidNextEdgePositions(node.position)
     for (let edge of edges) {
@@ -124,8 +110,6 @@ export class AStarSearch {
       };
       this.activeNodes.push(nextNode);
     }
-    console.log('post activeNodes: ');
-    console.log(this.activeNodes.data);
     this._findBestPath();
   }
 
@@ -164,6 +148,7 @@ export class AStarSearch {
     };
     let validEdges = [];
     for (let index = 0; index < edges.elements.length; index++) {
+      // Valid edges are ground elements, the Actor's dispenser, the Actor's objective, or the Actor itself
       if (
         (this.actor.config.ground.includes(edges.elements[index]) ||
           arraysEqual(this.actor.dispenser, edges.positions[index]) ||
@@ -171,7 +156,6 @@ export class AStarSearch {
           edges.elements[index] === 'a') &&
         !arrayHolds(this.checkedPositions, edges.positions[index])
       ) {
-        console.log(edges.positions[index]);
         validEdges.push(edges.positions[index]);
       }
     }
@@ -186,7 +170,6 @@ export class AStarSearch {
         this.actor.identifier + " is being blocked in by another Actor"
       );
     }
-    console.log(validEdges);
     return validEdges;
   }
 }

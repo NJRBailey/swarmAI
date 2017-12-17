@@ -261,56 +261,6 @@ var Actor = exports.Actor = function () {
     }
 
     /**
-     * Moves one position in the specified direction, if allowed.
-     * Only used in manual control.
-     * @param {String} direction The direction to move in | N,E,S,W
-     */
-
-  }, {
-    key: "moveCardinal",
-    value: function moveCardinal(direction) {
-      var edges = this.getSurroundings().elements;
-      switch (direction) {
-        case "N":
-          if (this.config.ground.includes(edges[0])) {
-            var north = [this.position[0] - 1, this.position[1]];
-            this.simulation.swapElements(this.position, north);
-            this.position = north;
-          } else {
-            throw new Error("Tried to move into a: " + edges[0]);
-          }
-          break;
-        case "E":
-          if (this.config.ground.includes(edges[1])) {
-            var east = [this.position[0], this.position[1] + 1];
-            this.simulation.swapElements(this.position, east);
-            this.position = east;
-          } else {
-            throw new Error("Tried to move into a: " + edges[1]);
-          }
-          break;
-        case "S":
-          if (this.config.ground.includes(edges[2])) {
-            var south = [this.position[0] + 1, this.position[1]];
-            this.simulation.swapElements(this.position, south);
-            this.position = south;
-          } else {
-            throw new Error("Tried to move into a: " + edges[2]);
-          }
-          break;
-        case "W":
-          if (this.config.ground.includes(edges[3])) {
-            var west = [this.position[0], this.position[1] - 1];
-            this.simulation.swapElements(this.position, west);
-            this.position = west;
-          } else {
-            throw new Error("Tried to move into a: " + edges[3]);
-          }
-          break;
-      }
-    }
-
-    /**
      * Picks up the specified item if it is next to one
      * @param {String} item An item element
      */
@@ -595,7 +545,6 @@ var Actor = exports.Actor = function () {
           }
         }
         replaceElement(actorArea, this.position, 'A');
-        console.log(path);
         return path;
       }
     }
@@ -766,8 +715,6 @@ var AStarSearch = exports.AStarSearch = function () {
       };
       // The node we are searching for
       this.target = target;
-      console.log('target:');
-      console.log(this.target);
       // Tracks the currently active nodes
       this.activeNodes = new _tinyqueue2.default([currentNode], function (a, b) {
         return a.cost - b.cost;
@@ -781,7 +728,6 @@ var AStarSearch = exports.AStarSearch = function () {
       // Constructs the path by tracing the previousNode pointers back to the start
       this.path = [];
       this._constructPath(this.activeNodes.peek());
-      console.log(JSON.stringify(this.path));
       return this.path;
     }
   }, {
@@ -789,28 +735,17 @@ var AStarSearch = exports.AStarSearch = function () {
     value: function _findBestPath() {
       // If the best node is not the target node, we continue searching
       var bestNode = this.activeNodes.peek();
-      console.log('this.activeNodes: ');
-      console.log(this.activeNodes.data);
-      console.log('bestNode: ');
-      console.log(bestNode);
       if (bestNode !== undefined) {
         if (!(0, _actor.arraysEqual)(bestNode.position, this.target)) {
           this._exploreNode(bestNode);
-        } else {
-          console.log('best node is target node');
         }
       }
-      console.log('best node was undefined');
     }
   }, {
     key: '_exploreNode',
     value: function _exploreNode(node) {
       // Remove this node from the list of active nodes
-      console.log('exploring node: ');
-      console.log(node);
       this.activeNodes.pop();
-      console.log('activeNodes: ');
-      console.log(this.activeNodes.data);
       this.checkedPositions.push(node.position);
       var edges = this.getValidNextEdgePositions(node.position);
       var _iteratorNormalCompletion = true;
@@ -843,8 +778,6 @@ var AStarSearch = exports.AStarSearch = function () {
         }
       }
 
-      console.log('post activeNodes: ');
-      console.log(this.activeNodes.data);
       this._findBestPath();
     }
   }, {
@@ -881,8 +814,8 @@ var AStarSearch = exports.AStarSearch = function () {
       };
       var validEdges = [];
       for (var index = 0; index < edges.elements.length; index++) {
+        // Valid edges are ground elements, the Actor's dispenser, the Actor's objective, or the Actor itself
         if ((this.actor.config.ground.includes(edges.elements[index]) || (0, _actor.arraysEqual)(this.actor.dispenser, edges.positions[index]) || (0, _actor.arraysEqual)(this.actor.objective, edges.positions[index]) || edges.elements[index] === 'a') && !(0, _actor.arrayHolds)(this.checkedPositions, edges.positions[index])) {
-          console.log(edges.positions[index]);
           validEdges.push(edges.positions[index]);
         }
       }
@@ -893,7 +826,6 @@ var AStarSearch = exports.AStarSearch = function () {
         // There is an actor blocking us in
         throw new Error(this.actor.identifier + " is being blocked in by another Actor");
       }
-      console.log(validEdges);
       return validEdges;
     }
   }]);

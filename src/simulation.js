@@ -38,7 +38,6 @@ export class Simulation {
     this.objectiveSpaces = [];
     for (let objective of this.config.objectiveElements) {
       this.objectiveSpaces = this.objectiveSpaces.concat(this._findPosition(objective));
-      console.log(this.objectiveSpaces);
     }
 
     // Stores the objective locations as an object to prevent removal race conditions

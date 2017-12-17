@@ -158,53 +158,6 @@ export class Actor {
   }
 
   /**
-   * Moves one position in the specified direction, if allowed.
-   * Only used in manual control.
-   * @param {String} direction The direction to move in | N,E,S,W
-   */
-  moveCardinal(direction) {
-    let edges = this.getSurroundings().elements;
-    switch (direction) {
-      case "N":
-        if (this.config.ground.includes(edges[0])) {
-          let north = [this.position[0] - 1, this.position[1]];
-          this.simulation.swapElements(this.position, north);
-          this.position = north;
-        } else {
-          throw new Error("Tried to move into a: " + edges[0]);
-        }
-        break;
-      case "E":
-        if (this.config.ground.includes(edges[1])) {
-          let east = [this.position[0], this.position[1] + 1];
-          this.simulation.swapElements(this.position, east);
-          this.position = east;
-        } else {
-          throw new Error("Tried to move into a: " + edges[1]);
-        }
-        break;
-      case "S":
-        if (this.config.ground.includes(edges[2])) {
-          let south = [this.position[0] + 1, this.position[1]];
-          this.simulation.swapElements(this.position, south);
-          this.position = south;
-        } else {
-          throw new Error("Tried to move into a: " + edges[2]);
-        }
-        break;
-      case "W":
-        if (this.config.ground.includes(edges[3])) {
-          let west = [this.position[0], this.position[1] - 1];
-          this.simulation.swapElements(this.position, west);
-          this.position = west;
-        } else {
-          throw new Error("Tried to move into a: " + edges[3]);
-        }
-        break;
-    }
-  }
-
-  /**
    * Picks up the specified item if it is next to one
    * @param {String} item An item element
    */
@@ -458,7 +411,6 @@ export class Actor {
         }
       }
       replaceElement(actorArea, this.position, 'A');
-      console.log(path);
       return path;
     }
   }
