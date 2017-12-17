@@ -16,7 +16,7 @@
     "start": "babel-node src/index.js",
     "build": "babel src/ -d build/",
     "production": "node build/index.js",
-    "browserify": "browserify src/simulation.js -o static/simulation.js -t [ babelify ] && browserify src/actor.js -o static/actor.js -t [ babelify ] && browserify src/loader.js -o static/loader.js -t [ babelify ] && browserify src/pathfinding/a-star-search.js -o static/pathfinding/a-star-search.js -t [ babelify ]",
+    "browserify": "browserify src/simulation.js -o static/simulation.js -t [ babelify ] && browserify src/actor.js -o static/actor.js -t [ babelify ] && browserify src/loader.js -o static/loader.js -t [ babelify ] && browserify src/pathfinding/a-star-search.js -o static/pathfinding/a-star-search.js -t [ babelify ] && browserify src/gui/terminal-gui.js -o static/gui/terminal-gui.js -t [ babelify ]",
     "test": "test"
   },
   "repository": {
