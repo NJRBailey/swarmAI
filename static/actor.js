@@ -326,7 +326,7 @@ var Actor = exports.Actor = function () {
           this.path = this.calculateNewPath();
         }
         if (this.path === undefined) {
-          throw new Error('this.path was undefined');
+          throw new Error("this.path was undefined");
         }
         // If we aren't next to the goal we have to move
         console.log(JSON.stringify(this.path));
@@ -352,6 +352,17 @@ var Actor = exports.Actor = function () {
   }, {
     key: "operate",
     value: function operate() {
+      // TODO find out why this happens
+      if (this.path === undefined) {
+        this.status = "inactive";
+        clearInterval(this.interval);
+        this.interval = undefined;
+        // Automatically reactivate while there are still objectives to complete
+        if (this.objective !== undefined) {
+          this.activate(this.time);
+        }
+      }
+
       if (this.simulation.objectives[this.objective] === undefined) {
         console.log(this.identifier + " switching objective");
         this.sortedObjectives.shift();
@@ -366,8 +377,46 @@ var Actor = exports.Actor = function () {
       }
       switch (this.status) {
         case "moving":
-          // Check that the path is clear - if not we will recalculate the path
-          if (this.config.ground.includes(this.simulation.getElement(this.path[0]))) {
+          // Check that the path is clear - if not we might recalculate the path
+          var clear = true;
+          var _iteratorNormalCompletion = true;
+          var _didIteratorError = false;
+          var _iteratorError = undefined;
+
+          try {
+            for (var _iterator = this.simulation.actors[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+              var _actor = _step.value;
+
+              if (_actor.identifier !== this.identifier) {
+                if (arraysEqual(this.path[0], _actor.path[0])) {
+                  if (this.priority < _actor.priority) {
+                    clear = false;
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            _didIteratorError = true;
+            _iteratorError = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion && _iterator.return) {
+                _iterator.return();
+              }
+            } finally {
+              if (_didIteratorError) {
+                throw _iteratorError;
+              }
+            }
+          }
+
+          if (this.config.ground.includes(this.simulation.getElement(this.path[0])) && !clear) {
+            this.status = "inactive";
+            clearInterval(this.interval);
+            this.interval = undefined;
+            // Automatically reactivates to calculate an alternate route
+            this.activate(this.time);
+          } else if (this.config.ground.includes(this.simulation.getElement(this.path[0])) && clear) {
             this._move(this.path[0]);
             this.path.shift();
             if (this.path.length === 0) {
@@ -380,13 +429,13 @@ var Actor = exports.Actor = function () {
           } else if (this.simulation.getElement(this.path[0]) === "A") {
             // Find the Actor that's in the way, and perform a priority challenge.
             // If it loses the challenge, we recalculate. If it wins, wait one tick.
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
             try {
-              for (var _iterator = this.simulation.actors[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                var actor = _step.value;
+              for (var _iterator2 = this.simulation.actors[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                var actor = _step2.value;
 
                 if (actor.position === this.path[0]) {
                   if (this.priority < actor.priority || actor.status === "inactive") {
@@ -399,16 +448,16 @@ var Actor = exports.Actor = function () {
                 }
               }
             } catch (err) {
-              _didIteratorError = true;
-              _iteratorError = err;
+              _didIteratorError2 = true;
+              _iteratorError2 = err;
             } finally {
               try {
-                if (!_iteratorNormalCompletion && _iterator.return) {
-                  _iterator.return();
+                if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                  _iterator2.return();
                 }
               } finally {
-                if (_didIteratorError) {
-                  throw _iteratorError;
+                if (_didIteratorError2) {
+                  throw _iteratorError2;
                 }
               }
             }
@@ -459,34 +508,34 @@ var Actor = exports.Actor = function () {
       this.searcher = new _aStarSearch.AStarSearch(this.simulation, this, this.config.heuristic);
       this.objective = this.sortedObjectives[0];
       // Check that objective is not the same as another actor
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
 
       try {
-        for (var _iterator2 = this.simulation.actors[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var _actor = _step2.value;
+        for (var _iterator3 = this.simulation.actors[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var _actor2 = _step3.value;
 
           // If two objectives are the same and this Actor has a lower priority
-          if (this.objective === _actor.objective && _actor.identifier !== this.identifier && this.priority < _actor.priority && _actor.interval !== undefined) {
+          if (this.objective === _actor2.objective && _actor2.identifier !== this.identifier && this.priority < _actor2.priority && _actor2.status !== "inactive") {
             this.sortedObjectives.shift();
             this.objective = this.sortedObjectives[0];
-          } else if (this.objective === _actor.objective && _actor.identifier !== this.identifier && _actor.interval !== undefined) {
-            this.simulation.interruptInterval(_actor.identifier);
+          } else if (this.objective === _actor2.objective && _actor2.identifier !== this.identifier && _actor2.status !== "inactive") {
+            this.simulation.interruptInterval(_actor2.identifier);
           }
         }
         // Calculate a path to either a dispenser or an objective
       } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-            _iterator2.return();
+          if (!_iteratorNormalCompletion3 && _iterator3.return) {
+            _iterator3.return();
           }
         } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
+          if (_didIteratorError3) {
+            throw _iteratorError3;
           }
         }
       }
@@ -516,13 +565,13 @@ var Actor = exports.Actor = function () {
 
         // Check that the path won't cause a collision with another Actor
         // If it will, recalculate with those tiles blacklisted
-        var _iteratorNormalCompletion3 = true;
-        var _didIteratorError3 = false;
-        var _iteratorError3 = undefined;
+        var _iteratorNormalCompletion4 = true;
+        var _didIteratorError4 = false;
+        var _iteratorError4 = undefined;
 
         try {
-          for (var _iterator3 = this.simulation.actors[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-            var actor = _step3.value;
+          for (var _iterator4 = this.simulation.actors[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+            var actor = _step4.value;
 
             for (var index = 0; index < path.length; index++) {
               if (arraysEqual(path[index], actor.path[index]) && this.priority < actor.priority) {
@@ -533,16 +582,16 @@ var Actor = exports.Actor = function () {
           }
           // If any collision points have been identified, recalculate the path
         } catch (err) {
-          _didIteratorError3 = true;
-          _iteratorError3 = err;
+          _didIteratorError4 = true;
+          _iteratorError4 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-              _iterator3.return();
+            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+              _iterator4.return();
             }
           } finally {
-            if (_didIteratorError3) {
-              throw _iteratorError3;
+            if (_didIteratorError4) {
+              throw _iteratorError4;
             }
           }
         }
@@ -564,7 +613,7 @@ var Actor = exports.Actor = function () {
 
         // Clean the Actor up
         if (path === undefined) {
-          console.log('path is undefined in actor');
+          console.log("path is undefined in actor");
         }
         replaceElement(actorArea, this.position, "A");
         return path;

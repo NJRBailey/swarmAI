@@ -217,7 +217,7 @@ export class Actor {
         this.path = this.calculateNewPath();
       }
       if (this.path === undefined) {
-        throw new Error('this.path was undefined');
+        throw new Error("this.path was undefined");
       }
       // If we aren't next to the goal we have to move
       console.log(JSON.stringify(this.path));
@@ -240,6 +240,17 @@ export class Actor {
    * Performs a task and sets the Actor ready for the next operation.
    */
   operate() {
+    // TODO find out why this happens
+    if (this.path === undefined) {
+      this.status = "inactive";
+      clearInterval(this.interval);
+      this.interval = undefined;
+      // Automatically reactivate while there are still objectives to complete
+      if (this.objective !== undefined) {
+        this.activate(this.time);
+      }
+    }
+
     if (this.simulation.objectives[this.objective] === undefined) {
       console.log(this.identifier + " switching objective");
       this.sortedObjectives.shift();
@@ -254,9 +265,34 @@ export class Actor {
     }
     switch (this.status) {
       case "moving":
-        // Check that the path is clear - if not we will recalculate the path
+        // Check that the path is clear - if not we might recalculate the path
+        let clear = true;
+        for (let actor of this.simulation.actors) {
+          if (actor.identifier !== this.identifier) {
+            if (arraysEqual(this.path[0], actor.path[0])) {
+              if (this.priority < actor.priority) {
+                clear = false;
+              }
+            }
+          }
+        }
+
         if (
-          this.config.ground.includes(this.simulation.getElement(this.path[0]))
+          this.config.ground.includes(
+            this.simulation.getElement(this.path[0])
+          ) &&
+          !clear
+        ) {
+          this.status = "inactive";
+          clearInterval(this.interval);
+          this.interval = undefined;
+          // Automatically reactivates to calculate an alternate route
+          this.activate(this.time);
+        } else if (
+          this.config.ground.includes(
+            this.simulation.getElement(this.path[0])
+          ) &&
+          clear
         ) {
           this._move(this.path[0]);
           this.path.shift();
@@ -338,14 +374,14 @@ export class Actor {
         this.objective === actor.objective &&
         actor.identifier !== this.identifier &&
         this.priority < actor.priority &&
-        actor.status !== 'inactive'
+        actor.status !== "inactive"
       ) {
         this.sortedObjectives.shift();
         this.objective = this.sortedObjectives[0];
       } else if (
         this.objective === actor.objective &&
         actor.identifier !== this.identifier &&
-        actor.status !== 'inactive'
+        actor.status !== "inactive"
       ) {
         this.simulation.interruptInterval(actor.identifier);
       }
@@ -429,7 +465,7 @@ export class Actor {
 
       // Clean the Actor up
       if (path === undefined) {
-        console.log('path is undefined in actor');
+        console.log("path is undefined in actor");
       }
       replaceElement(actorArea, this.position, "A");
       return path;
