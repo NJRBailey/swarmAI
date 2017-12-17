@@ -1,5 +1,6 @@
 import {Actor} from './actor.js';
 import TinyQueue from 'tinyqueue';
+import {terminalGui} from './gui/terminal-gui.js';
 
 /**
  * A simulation of cooperative (Swarm) AI.
@@ -74,6 +75,9 @@ export class Simulation {
       this.actors.push(actor);
       this.paths[actorDetails.identifier] = [];
     }
+
+    // The gui we'll use to view the simulation
+    this.gui = new terminalGui(this.area.length, this.area[0].length);
   }
 
   /**
@@ -123,7 +127,7 @@ export class Simulation {
    */
   replaceElement(position, newElement) {
     this.area[position[0]][position[1]] = newElement;
-    this.print();
+    this.gui.updateGui(this.area);
   }
 
   /**

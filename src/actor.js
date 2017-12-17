@@ -154,7 +154,7 @@ export class Actor {
         " that it was not next to."
       );
     }
-    this.simulation.print();
+    this.simulation.gui.updateGui(this.simulation.area);
   }
 
   /**
@@ -180,7 +180,7 @@ export class Actor {
         this.identifier + "tried to take an unspecified item: " + item
       );
     }
-    this.simulation.print();
+    this.simulation.gui.updateGui(this.simulation.area);
   }
 
   /**
@@ -196,7 +196,7 @@ export class Actor {
         this.identifier + " tried to place an item while it was not holding one"
       );
     }
-    this.simulation.print();
+    this.simulation.gui.updateGui(this.simulation.area);
   }
 
   /**
@@ -487,6 +487,5 @@ export function getArrayIndex(containerArray, findArray) {
  * @param {String} newElement The element to replace with
  */
 export function replaceElement(area, position, newElement) {
-  console.log(area);
   area[position[0]][position[1]] = newElement;
 }

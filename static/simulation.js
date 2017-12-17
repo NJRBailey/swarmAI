@@ -257,7 +257,7 @@ var Actor = exports.Actor = function () {
       } else {
         throw new Error(this.identifier + " tried to move to a position " + position + " that it was not next to.");
       }
-      this.simulation.print();
+      this.simulation.gui.updateGui(this.simulation.area);
     }
 
     /**
@@ -279,7 +279,7 @@ var Actor = exports.Actor = function () {
       } else {
         throw new Error(this.identifier + "tried to take an unspecified item: " + item);
       }
-      this.simulation.print();
+      this.simulation.gui.updateGui(this.simulation.area);
     }
 
     /**
@@ -296,7 +296,7 @@ var Actor = exports.Actor = function () {
       } else {
         throw new Error(this.identifier + " tried to place an item while it was not holding one");
       }
-      this.simulation.print();
+      this.simulation.gui.updateGui(this.simulation.area);
     }
 
     /**
@@ -614,11 +614,81 @@ function getArrayIndex(containerArray, findArray) {
  * @param {String} newElement The element to replace with
  */
 function replaceElement(area, position, newElement) {
-  console.log(area);
   area[position[0]][position[1]] = newElement;
 }
 
-},{"./pathfinding/a-star-search.js":3,"tinyqueue":1}],3:[function(require,module,exports){
+},{"./pathfinding/a-star-search.js":4,"tinyqueue":1}],3:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var terminalGui = exports.terminalGui = function () {
+
+  /**
+   * Loads the output textarea onto the page
+   */
+  function terminalGui(rows, columns) {
+    _classCallCheck(this, terminalGui);
+
+    var outputArea = document.getElementById('simulation');
+    this.output = document.createElement('textarea');
+    this.output.style.fontSize = '20px';
+    this.output.style.overflow = 'visible';
+    this.output.rows = rows * 2;
+    this.output.cols = columns * 2;
+    outputArea.appendChild(this.output);
+  }
+
+  /**
+   * Clears the current display and displays the new area
+   * @param {Array} area The simulation area - will only work for 2D maps
+   */
+
+
+  _createClass(terminalGui, [{
+    key: 'updateGui',
+    value: function updateGui(area) {
+      this.output.value = '';
+      var display = '';
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = area[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var row = _step.value;
+
+          display = display.concat(row.toString().replace(/,/g, ' ') + '\n');
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+
+      this.output.value = display;
+    }
+  }]);
+
+  return terminalGui;
+}();
+
+},{}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -873,7 +943,7 @@ function arrayHoldsAny(arr, items) {
   return false;
 }
 
-},{"../actor":2,"tinyqueue":1}],4:[function(require,module,exports){
+},{"../actor":2,"tinyqueue":1}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -888,6 +958,8 @@ var _actor = require('./actor.js');
 var _tinyqueue = require('tinyqueue');
 
 var _tinyqueue2 = _interopRequireDefault(_tinyqueue);
+
+var _terminalGui = require('./gui/terminal-gui.js');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -939,7 +1011,6 @@ var Simulation = exports.Simulation = function () {
         var objective = _step.value;
 
         this.objectiveSpaces = this.objectiveSpaces.concat(this._findPosition(objective));
-        console.log(this.objectiveSpaces);
       }
 
       // Stores the objective locations as an object to prevent removal race conditions
@@ -1035,6 +1106,9 @@ var Simulation = exports.Simulation = function () {
       this.actors.push(actor);
       this.paths[actorDetails.identifier] = [];
     }
+
+    // The gui we'll use to view the simulation
+    this.gui = new _terminalGui.terminalGui(this.area.length, this.area[0].length);
   }
 
   /**
@@ -1097,7 +1171,7 @@ var Simulation = exports.Simulation = function () {
     key: 'replaceElement',
     value: function replaceElement(position, newElement) {
       this.area[position[0]][position[1]] = newElement;
-      this.print();
+      this.gui.updateGui(this.area);
     }
 
     /**
@@ -1231,4 +1305,4 @@ var Simulation = exports.Simulation = function () {
 //   }
 // }
 
-},{"./actor.js":2,"tinyqueue":1}]},{},[4]);
+},{"./actor.js":2,"./gui/terminal-gui.js":3,"tinyqueue":1}]},{},[5]);
