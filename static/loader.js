@@ -98,6 +98,7 @@ exports.Actor = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+exports.arraysEqual = arraysEqual;
 exports.arrayHolds = arrayHolds;
 exports.getArrayIndex = getArrayIndex;
 exports.replaceElement = replaceElement;
@@ -407,9 +408,7 @@ var Actor = exports.Actor = function () {
                 this.status = "placing";
               }
             }
-            // Thids doesn;t work becaus of lower case 'a' not swithcing abck to 'A'
           } else if (this.simulation.getElement(this.path[0]) === 'A') {
-            console.log('Actor is blocking ' + this.identifier);
             // Find the Actor that's in the way, and perform a priority challenge.
             // If it loses the challenge, we recalculate. If it wins, wait one tick.
             var _iteratorNormalCompletion = true;
@@ -420,12 +419,7 @@ var Actor = exports.Actor = function () {
               for (var _iterator = this.simulation.actors[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                 var actor = _step.value;
 
-                console.log('entered loop');
-                console.log('actor pos: ' + actor.position);
-                console.log('this path: ' + this.path[0]);
                 if (actor.position === this.path[0]) {
-                  console.log('Blocking actor is ' + actor.identifier);
-                  console.log('this priority: ' + this.priority + ', actor priority: ' + actor.priority);
                   if (this.priority < actor.priority) {
                     this.status = "inactive";
                     clearInterval(this.interval);
@@ -459,6 +453,7 @@ var Actor = exports.Actor = function () {
           break;
         case "retrieving":
           this.takeItem("B");
+          this.dispenser = undefined;
           var surroundings = this.getSurroundings();
           if (arrayHolds(surroundings.positions, this.objective)) {
             this.status = "placing";
@@ -804,6 +799,8 @@ var AStarSearch = exports.AStarSearch = function () {
       };
       // The node we are searching for
       this.target = target;
+      console.log('target:');
+      console.log(this.target);
       // Tracks the currently active nodes
       this.activeNodes = new _tinyqueue2.default([currentNode], function (a, b) {
         return a.cost - b.cost;
@@ -813,11 +810,11 @@ var AStarSearch = exports.AStarSearch = function () {
 
       // Will keep expanding nodes until the target is the best node, or all nodes have been expanded
       this._findBestPath();
+      //TODO this.activeNodes is blank at this point - why?
       // Constructs the path by tracing the previousNode pointers back to the start
       this.path = [];
       this._constructPath(this.activeNodes.peek());
-      console.log(this.path);
-
+      console.log(JSON.stringify(this.path));
       return this.path;
     }
   }, {
@@ -825,17 +822,28 @@ var AStarSearch = exports.AStarSearch = function () {
     value: function _findBestPath() {
       // If the best node is not the target node, we continue searching
       var bestNode = this.activeNodes.peek();
+      console.log('this.activeNodes: ');
+      console.log(this.activeNodes.data);
+      console.log('bestNode: ');
+      console.log(bestNode);
       if (bestNode !== undefined) {
-        if (bestNode.position !== this.target) {
+        if (!(0, _actor.arraysEqual)(bestNode.position, this.target)) {
           this._exploreNode(bestNode);
+        } else {
+          console.log('best node is target node');
         }
       }
+      console.log('best node was undefined');
     }
   }, {
     key: '_exploreNode',
     value: function _exploreNode(node) {
       // Remove this node from the list of active nodes
+      console.log('exploring node: ');
+      console.log(node);
       this.activeNodes.pop();
+      console.log('activeNodes: ');
+      console.log(this.activeNodes.data);
       this.checkedPositions.push(node.position);
       var edges = this.getValidNextEdgePositions(node.position);
       var _iteratorNormalCompletion = true;
@@ -868,6 +876,8 @@ var AStarSearch = exports.AStarSearch = function () {
         }
       }
 
+      console.log('post activeNodes: ');
+      console.log(this.activeNodes.data);
       this._findBestPath();
     }
   }, {
@@ -877,7 +887,7 @@ var AStarSearch = exports.AStarSearch = function () {
       if (node !== undefined) {
         if (node.previous !== null) {
           // We don't want to add the target to our path, as we will only navigate next to a target
-          if (node.position !== this.target) {
+          if (!(0, _actor.arraysEqual)(node.position, this.target)) {
             this.path.unshift(node.position);
           }
           this._constructPath(node.previous);
@@ -902,10 +912,10 @@ var AStarSearch = exports.AStarSearch = function () {
         ],
         positions: [[position[0] - 1, position[1]], [position[0], position[1] + 1], [position[0] + 1, position[1]], [position[0], position[1] - 1]]
       };
-      window.validEdges = edges;
       var validEdges = [];
       for (var index = 0; index < edges.elements.length; index++) {
-        if ((this.actor.config.ground.includes(edges.elements[index]) || this.actor.config.items.includes(edges.elements[index]) || this.actor.config.objectives.includes(edges.elements[index]) || edges.elements[index] === 'a') && !(0, _actor.arrayHolds)(this.checkedPositions, edges.positions[index])) {
+        if ((this.actor.config.ground.includes(edges.elements[index]) || (0, _actor.arraysEqual)(this.actor.dispenser, edges.positions[index]) || (0, _actor.arraysEqual)(this.actor.objective, edges.positions[index]) || edges.elements[index] === 'a') && !(0, _actor.arrayHolds)(this.checkedPositions, edges.positions[index])) {
+          console.log(edges.positions[index]);
           validEdges.push(edges.positions[index]);
         }
       }
@@ -916,6 +926,7 @@ var AStarSearch = exports.AStarSearch = function () {
         // There is an actor blocking us in
         throw new Error(this.actor.identifier + " is being blocked in by another Actor");
       }
+      console.log(validEdges);
       return validEdges;
     }
   }]);

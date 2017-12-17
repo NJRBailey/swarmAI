@@ -23,9 +23,7 @@ export class Simulation {
     window.sim = this;
 
     window.testQueue = new TinyQueue([], function(a, b) {
-      return (
-        a.cost - b.cost
-      );
+      return a.cost - b.cost;
     });
 
     this.config = simulationConfig;

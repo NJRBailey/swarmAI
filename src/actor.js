@@ -297,18 +297,11 @@ export class Actor {
               this.status = "placing";
             }
           }
-          // Thids doesn;t work becaus of lower case 'a' not swithcing abck to 'A'
         } else if (this.simulation.getElement(this.path[0]) === 'A') {
-          console.log('Actor is blocking ' + this.identifier);
           // Find the Actor that's in the way, and perform a priority challenge.
           // If it loses the challenge, we recalculate. If it wins, wait one tick.
           for (let actor of this.simulation.actors) {
-            console.log('entered loop');
-            console.log('actor pos: ' + actor.position);
-            console.log('this path: ' + this.path[0]);
             if (actor.position === this.path[0]) {
-              console.log('Blocking actor is ' + actor.identifier);
-              console.log('this priority: ' + this.priority + ', actor priority: ' + actor.priority);
               if (this.priority < actor.priority) {
                 this.status = "inactive";
                 clearInterval(this.interval);
@@ -328,6 +321,7 @@ export class Actor {
         break;
       case "retrieving":
         this.takeItem("B");
+        this.dispenser = undefined;
         let surroundings = this.getSurroundings();
         if (arrayHolds(surroundings.positions, this.objective)) {
           this.status = "placing";
@@ -476,7 +470,7 @@ export class Actor {
  * @param {Array} arr1 An array
  * @param {Array} arr2 Another array
  */
-function arraysEqual(arr1, arr2) {
+export function arraysEqual(arr1, arr2) {
   if (arr1 === undefined || arr2 === undefined) {
     return false;
   } else if (arr1.length !== arr2.length) {
