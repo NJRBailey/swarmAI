@@ -42,6 +42,7 @@ export class AStarSearch {
     this.simulation = simulation;
     this.actor = actor;
     this.heuristic = heuristic;
+    this.blacklistedNodes = [];
     // The position of the next objective
     // let objective = this.actor.objective;
     // while (objective !== undefined) {}
@@ -63,6 +64,7 @@ export class AStarSearch {
     } else {
       this.area = this.simulation.area;
     }
+
     // The node we will start searching from
     let currentNode = {
       position: current,
@@ -84,6 +86,9 @@ export class AStarSearch {
     // Constructs the path by tracing the previousNode pointers back to the start
     this.path = [];
     this._constructPath(this.activeNodes.peek());
+    if (this.path === undefined) {
+      console.log('path is undefined in a star search');
+    }
     return this.path;
   }
 
@@ -154,7 +159,8 @@ export class AStarSearch {
           arraysEqual(this.actor.dispenser, edges.positions[index]) ||
           arraysEqual(this.actor.objective, edges.positions[index]) ||
           edges.elements[index] === 'a') &&
-        !arrayHolds(this.checkedPositions, edges.positions[index])
+        !arrayHolds(this.checkedPositions, edges.positions[index]) &&
+        !arrayHolds(this.actor.blacklist, edges.positions[index])
       ) {
         validEdges.push(edges.positions[index]);
       }
