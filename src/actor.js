@@ -567,7 +567,7 @@ export class Actor {
         let clear = true;
         for (let actor of this.simulation.actors) {
           if (this.identifier !== actor.identifier) {
-            if (this.objective === actor.objective) {
+            if (objective === actor.objective) {
               clear = false;
             }
           }

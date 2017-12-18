@@ -720,7 +720,7 @@ var Actor = exports.Actor = function () {
               var actor = _step6.value;
 
               if (this.identifier !== actor.identifier) {
-                if (this.objective === actor.objective) {
+                if (objective === actor.objective) {
                   clear = false;
                 }
               }
