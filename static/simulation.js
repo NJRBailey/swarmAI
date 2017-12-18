@@ -143,7 +143,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * A better solution would be to wait for the Actor to move. However if two Actors were
  * trying to get past each other in a narrow chokepoint, there would have to be a priority
  * challenge, with a pathfind to back up out of the way of the greater priority
- * 
+ *
  * It would probabky be better to have the actual Acotr moving about, rather than an 'A'
  */
 var Actor = exports.Actor = function () {
@@ -183,6 +183,8 @@ var Actor = exports.Actor = function () {
     this.path = [];
     // The current status of the Actor
     this.status = "inactive";
+    // The list of blacklisted positions for this Actor
+    this.blacklist = [];
 
     // Objective priorities as an array
     this.sortedObjectives = [];
@@ -193,6 +195,9 @@ var Actor = exports.Actor = function () {
     while (objectivePriorityQueue.length > 0) {
       this.sortedObjectives.push(objectivePriorityQueue.pop());
     }
+
+    // The searcher we will use
+    this.searcher = new _aStarSearch.AStarSearch(this.simulation, this, this.config.heuristic);
 
     // for testing
     window.actors.push(this);
@@ -317,24 +322,28 @@ var Actor = exports.Actor = function () {
       var time = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 500;
 
       this.time = time;
+      this.blacklist.length = 0;
       // Check that we have tasks to perform
       if (this.sortedObjectives.length > 0) {
-        if (this.path.length === 0) {
-          this.path = this.calculateNewPath();
+        this.objective = this.sortedObjectives[0];
+        if (this.objective !== undefined) {
+          this.path = this.findNewPath();
+          if (this.path !== null) {
+            // If we aren't next to the goal we have to move
+            if (this.path.length > 0) {
+              this.status = "moving";
+            } else if (this._item === undefined) {
+              this.status === "retrieving";
+            } else {
+              this.status === "placing";
+            }
+            // This interval will be cleared by the Actor placing an item, or by being interrupted by a
+            // higher priority Actor.
+            this.interval = setInterval(function () {
+              _this2.operate();
+            }, time);
+          }
         }
-        // If we aren't next to the goal we have to move
-        if (this.path.length > 0) {
-          this.status = "moving";
-        } else if (this._item === undefined) {
-          this.status === "retrieving";
-        } else {
-          this.status === "placing";
-        }
-        // This interval will be cleared by the Actor placing an item, or by being interrupted by a
-        // higher priority Actor.
-        this.interval = setInterval(function () {
-          _this2.operate();
-        }, time);
       }
     }
 
@@ -345,37 +354,47 @@ var Actor = exports.Actor = function () {
   }, {
     key: "operate",
     value: function operate() {
-      switch (this.status) {
-        case "moving":
-          // Check that the path is clear - if not we will recalculate the path
-          if (this.config.ground.includes(this.simulation.getElement(this.path[0]))) {
-            this._move(this.path[0]);
-            this.path.shift();
-            if (this.path.length === 0) {
-              if (this._item === undefined) {
-                this.status = "retrieving";
-              } else {
-                this.status = "placing";
-              }
-            }
-          } else if (this.simulation.getElement(this.path[0]) === 'A') {
-            // Find the Actor that's in the way, and perform a priority challenge.
-            // If it loses the challenge, we recalculate. If it wins, wait one tick.
+      // // Check that our current objective is valid - if we should be on another objective, reactivate
+      // let validObjective = this.findValidObjective();
+      // if (validObjective !== this.objective) {
+      //   this.objective = validObjective;
+      //   this.status = "inactive";
+      //   clearInterval(this.interval);
+      //   this.interval = undefined;
+      //   // Automatically reactivate while there are still objectives to complete
+      //   if (this.objective !== undefined) {
+      //     this.activate(this.time);
+      //   }
+      // }
+
+      if (this.simulation.objectives[this.objective] === undefined) {
+        this.sortedObjectives.shift();
+        this.objective = this.sortedObjectives[0];
+        this.status = "inactive";
+        clearInterval(this.interval);
+        this.interval = undefined;
+        // Automatically reactivate while there are still objectives to complete
+        if (this.objective !== undefined) {
+          this.activate(this.time);
+        }
+      } else {
+        switch (this.status) {
+          case "moving":
+            // Check that the path is clear - if not we might recalculate the path
+            var clear = true;
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
             var _iteratorError = undefined;
 
             try {
               for (var _iterator = this.simulation.actors[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                var actor = _step.value;
+                var _actor = _step.value;
 
-                if (actor.position === this.path[0]) {
-                  if (this.priority < actor.priority) {
-                    this.status = "inactive";
-                    clearInterval(this.interval);
-                    this.interval = undefined;
-                    // Automatically reactivates to calculate an alternate route
-                    this.activate(this.time);
+                if (_actor.identifier !== this.identifier) {
+                  if (arraysEqual(this.path[0], _actor.path[0])) {
+                    if (this.priority < _actor.priority) {
+                      clear = false;
+                    }
                   }
                 }
               }
@@ -393,21 +412,81 @@ var Actor = exports.Actor = function () {
                 }
               }
             }
-          } else {
-            this.status = "inactive";
-            clearInterval(this.interval);
-            this.interval = undefined;
-            // Automatically reactivates to calculate an alternate route
-            this.activate(this.time);
-          }
-          break;
-        case "retrieving":
-          this.takeItem("B");
-          this.dispenser = undefined;
-          var surroundings = this.getSurroundings();
-          if (arrayHolds(surroundings.positions, this.objective)) {
-            this.status = "placing";
-          } else {
+
+            if (this.config.ground.includes(this.simulation.getElement(this.path[0])) && !clear) {
+              this.status = "inactive";
+              clearInterval(this.interval);
+              this.interval = undefined;
+              // Automatically reactivates to calculate an alternate route
+              this.activate(this.time);
+            } else if (this.config.ground.includes(this.simulation.getElement(this.path[0])) && clear) {
+              this._move(this.path[0]);
+              this.path.shift();
+              if (this.path.length === 0) {
+                if (this._item === undefined) {
+                  this.status = "retrieving";
+                } else {
+                  this.status = "placing";
+                }
+              }
+            } else if (this.simulation.getElement(this.path[0]) === "A") {
+              // Find the Actor that's in the way, and perform a priority challenge.
+              // If it loses the challenge, we recalculate. If it wins, wait one tick.
+              var _iteratorNormalCompletion2 = true;
+              var _didIteratorError2 = false;
+              var _iteratorError2 = undefined;
+
+              try {
+                for (var _iterator2 = this.simulation.actors[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                  var actor = _step2.value;
+
+                  if (actor.position === this.path[0]) {
+                    if (this.priority < actor.priority || actor.status === "inactive") {
+                      this.status = "inactive";
+                      clearInterval(this.interval);
+                      this.interval = undefined;
+                      // Automatically reactivates to calculate an alternate route
+                      this.activate(this.time);
+                    }
+                  }
+                }
+              } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                    _iterator2.return();
+                  }
+                } finally {
+                  if (_didIteratorError2) {
+                    throw _iteratorError2;
+                  }
+                }
+              }
+            }
+            break;
+          case "retrieving":
+            this.takeItem("B");
+            this.dispenser = undefined;
+            var surroundings = this.getSurroundings();
+            if (arrayHolds(surroundings.positions, this.objective)) {
+              this.status = "placing";
+            } else {
+              this.status = "inactive";
+              clearInterval(this.interval);
+              this.interval = undefined;
+              // Automatically reactivate while there are still objectives to complete
+              if (this.objective !== undefined) {
+                this.activate(this.time);
+              }
+            }
+            break;
+          case "placing":
+            this.placeItem(this.objective);
+            this.sortedObjectives.shift();
+            delete this.simulation.objectives[this.objective];
+            this.objective = this.sortedObjectives[0];
             this.status = "inactive";
             clearInterval(this.interval);
             this.interval = undefined;
@@ -415,20 +494,8 @@ var Actor = exports.Actor = function () {
             if (this.objective !== undefined) {
               this.activate(this.time);
             }
-          }
-          break;
-        case "placing":
-          this.placeItem(this.objective);
-          this.sortedObjectives.shift();
-          this.objective = this.sortedObjectives[0];
-          this.status = "inactive";
-          clearInterval(this.interval);
-          this.interval = undefined;
-          // Automatically reactivate while there are still objectives to complete
-          if (this.objective !== undefined) {
-            this.activate(this.time);
-          }
-          break;
+            break;
+        }
       }
     }
 
@@ -440,39 +507,38 @@ var Actor = exports.Actor = function () {
     key: "calculateNewPath",
     value: function calculateNewPath() {
       // We will return path at the end. It will be set to the calculated path.
-      var path = void 0;
+      var path = [];
 
       this.searcher = new _aStarSearch.AStarSearch(this.simulation, this, this.config.heuristic);
-      this.objective = this.sortedObjectives[0];
       // Check that objective is not the same as another actor
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
 
       try {
-        for (var _iterator2 = this.simulation.actors[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var _actor = _step2.value;
+        for (var _iterator3 = this.simulation.actors[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var _actor2 = _step3.value;
 
           // If two objectives are the same and this Actor has a lower priority
-          if (this.objective === _actor.objective && _actor.identifier !== this.identifier && this.priority < _actor.priority && _actor.interval !== undefined) {
+          if (arraysEqual(this.objective, _actor2.objective) && _actor2.identifier !== this.identifier && this.priority < _actor2.priority && _actor2.status !== "inactive") {
             this.sortedObjectives.shift();
             this.objective = this.sortedObjectives[0];
-          } else if (this.objective === _actor.objective && _actor.identifier !== this.identifier && _actor.interval !== undefined) {
-            this.simulation.interruptInterval(_actor.identifier);
+          } else if (arraysEqual(this.objective, _actor2.objective) && _actor2.identifier !== this.identifier && _actor2.status !== "inactive") {
+            this.simulation.interruptInterval(_actor2.identifier);
           }
         }
         // Calculate a path to either a dispenser or an objective
       } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-            _iterator2.return();
+          if (!_iteratorNormalCompletion3 && _iterator3.return) {
+            _iterator3.return();
           }
         } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
+          if (_didIteratorError3) {
+            throw _iteratorError3;
           }
         }
       }
@@ -480,7 +546,7 @@ var Actor = exports.Actor = function () {
       if (this.objective !== undefined) {
         // Replace the Actor's position with a temporary 'clear' value
         var actorArea = Array.from(this.simulation.area);
-        replaceElement(actorArea, this.position, 'a');
+        replaceElement(actorArea, this.position, "a");
         if (this._item === undefined) {
           // If we aren't holding an item, go to the nearest dispenser
           // We sort the dispensers
@@ -493,60 +559,199 @@ var Actor = exports.Actor = function () {
         } else {
           path = this.searcher.calculateShortestPath(this.position, this.objective, actorArea);
         }
-        // Check that there is a path to follow
-        if (path === null) {
-          throw new Error("Path contained null values. Path returned as: " + path);
-        }
+        // // Check that there is a path to follow
+        // if (path === null || path === undefined || path === '' || path === false || path === 0 || path === NaN) {
+        //   throw new Error(
+        //     "Path contained null values. Path returned as: " + path
+        //   );
+        // }
 
         // Check that the path won't cause a collision with another Actor
-        // If it will, recalculate with that tile blacklisted, and repeat until there will be no collisions
-
-        // Holds the positions which this Actor should not travel upon to reach this goal
-        var blacklistArea = actorArea;
-        // Will be set to true if we change any tiles
-        var blacklist = false;
-        var _iteratorNormalCompletion3 = true;
-        var _didIteratorError3 = false;
-        var _iteratorError3 = undefined;
+        // If it will, recalculate with those tiles blacklisted
+        var _iteratorNormalCompletion4 = true;
+        var _didIteratorError4 = false;
+        var _iteratorError4 = undefined;
 
         try {
-          for (var _iterator3 = this.simulation.actors[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-            var actor = _step3.value;
+          for (var _iterator4 = this.simulation.actors[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+            var actor = _step4.value;
 
             for (var index = 0; index < path.length; index++) {
               if (arraysEqual(path[index], actor.path[index]) && this.priority < actor.priority) {
                 // Set the position as impassable for this Actor
-                blacklistArea[path[index][0]][path[index][1]] = "/";
-                blacklist = true;
+                this.blacklist.push(path[index]);
               }
             }
           }
           // If any collision points have been identified, recalculate the path
         } catch (err) {
-          _didIteratorError3 = true;
-          _iteratorError3 = err;
+          _didIteratorError4 = true;
+          _iteratorError4 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-              _iterator3.return();
+            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+              _iterator4.return();
             }
           } finally {
-            if (_didIteratorError3) {
-              throw _iteratorError3;
+            if (_didIteratorError4) {
+              throw _iteratorError4;
             }
           }
         }
 
-        if (blacklist === true) {
+        if (this.blacklist.length > 0) {
           if (this.dispenser !== undefined) {
-            path = this.searcher.calculateShortestPath(this.position, this.dispenser, blacklistArea);
+            path = this.searcher.calculateShortestPath(this.position, this.dispenser, actorArea);
           } else {
-            path = this.searcher.calculateShortestPath(this.position, this.objective, blacklistArea);
+            path = this.searcher.calculateShortestPath(this.position, this.objective, actorArea);
           }
         }
-        replaceElement(actorArea, this.position, 'A');
+
+        // // Check that there is a path to follow
+        // if (path === null || path === undefined || path === '' || path === false || path === 0 || path === NaN) {
+        //   throw new Error(
+        //     "Path contained null values. Path returned as: " + path
+        //   );
+        // }
+
+        // Clean the Actor up
+        replaceElement(actorArea, this.position, "A");
         return path;
       }
+    }
+
+    /**
+     * This will return a path or null
+     * It should check for collision points
+     * It should find a path to either a dispenser or an objective
+     * It should not check that the objective is correct, this should be done by a different method
+     * It should check that the objective is defined however
+     */
+
+  }, {
+    key: "findNewPath",
+    value: function findNewPath() {
+      var path = null;
+      this.blacklist.length = 0;
+
+      if (this.objective !== undefined) {
+        // If the item is undefined, we need to go to a dispenser
+        if (this._item === undefined) {
+          // Sort the dispensers by distance
+          var distanceSortedDispensers = new _tinyqueue2.default(this.simulation.itemSpaces, function (a, b) {
+            return Math.abs(this.position[0] - a[0]) + Math.abs(this.position[1] - a[1]) - (Math.abs(this.position[0] - b[0]) + Math.abs(this.position[1] - b[1]));
+          });
+          // Pick the nearest one
+          this.dispenser = distanceSortedDispensers.peek();
+          // Find a path to it
+          path = this.searcher.calculateShortestPath(this.position, this.dispenser, this.simulation.area);
+        } else {
+          path = this.searcher.calculateShortestPath(this.position, this.objective, this.simulation.area);
+        }
+        // We need to check that we won't collide with another Actor
+        var _iteratorNormalCompletion5 = true;
+        var _didIteratorError5 = false;
+        var _iteratorError5 = undefined;
+
+        try {
+          for (var _iterator5 = this.simulation.actors[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+            var actor = _step5.value;
+
+            if (actor.identifier !== this.identifier) {
+              for (var i = 0; i < path.length; i++) {
+                if (arraysEqual(this.path[i], actor.path[i])) {
+                  if (this.priority < actor.priority) {
+                    this.blacklist.push(this.path[i]);
+                  }
+                }
+              }
+            }
+          }
+          // If we blacklisted some positions, recalculate the path
+        } catch (err) {
+          _didIteratorError5 = true;
+          _iteratorError5 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion5 && _iterator5.return) {
+              _iterator5.return();
+            }
+          } finally {
+            if (_didIteratorError5) {
+              throw _iteratorError5;
+            }
+          }
+        }
+
+        if (this.blacklist.length > 0) {
+          // If the item is undefined, we need to go to a dispenser
+          if (this._item === undefined) {
+            path = this.searcher.calculateShortestPath(this.position, this.dispenser, this.simulation.area);
+          } else {
+            path = this.searcher.calculateShortestPath(this.position, this.objective, this.simulation.area);
+          }
+        }
+      }
+
+      return path;
+    }
+
+    /**
+     * Looks at the objectives for this Actor and returns the first objective that has not been completed
+     * and that is not currently being completed by another Actor, or undefined if no valid objective can
+     * be found.
+     * @return {Array} The position for the next objective
+     */
+
+  }, {
+    key: "findValidObjective",
+    value: function findValidObjective() {
+      for (var i = 0; i < this.sortedObjectives.length; i++) {
+        var objective = this.sortedObjectives[i];
+        // for (let objective of this.sortedObjectives) {
+        if (this.simulation.objectives[objective] !== undefined) {
+          var clear = true;
+          var _iteratorNormalCompletion6 = true;
+          var _didIteratorError6 = false;
+          var _iteratorError6 = undefined;
+
+          try {
+            for (var _iterator6 = this.simulation.actors[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+              var actor = _step6.value;
+
+              if (this.identifier !== actor.identifier) {
+                if (objective === actor.objective) {
+                  clear = false;
+                }
+              }
+            }
+          } catch (err) {
+            _didIteratorError6 = true;
+            _iteratorError6 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                _iterator6.return();
+              }
+            } finally {
+              if (_didIteratorError6) {
+                throw _iteratorError6;
+              }
+            }
+          }
+
+          if (clear) {
+            return objective;
+          } else {
+            this.sortedObjectives.splice(i, 1);
+            i--;
+          }
+        } else {
+          this.sortedObjectives.splice(i, 1);
+          i--;
+        }
+      }
+      return undefined;
     }
   }]);
 
@@ -689,7 +894,7 @@ var terminalGui = exports.terminalGui = function () {
 }();
 
 },{}],4:[function(require,module,exports){
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -698,11 +903,11 @@ exports.AStarSearch = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _tinyqueue = require('tinyqueue');
+var _tinyqueue = require("tinyqueue");
 
 var _tinyqueue2 = _interopRequireDefault(_tinyqueue);
 
-var _actor = require('../actor');
+var _actor = require("../actor");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -750,6 +955,8 @@ var AStarSearch = exports.AStarSearch = function () {
     this.simulation = simulation;
     this.actor = actor;
     this.heuristic = heuristic;
+    this.path = [];
+    this.blacklistedNodes = [];
     // The position of the next objective
     // let objective = this.actor.objective;
     // while (objective !== undefined) {}
@@ -767,7 +974,7 @@ var AStarSearch = exports.AStarSearch = function () {
 
 
   _createClass(AStarSearch, [{
-    key: 'calculateShortestPath',
+    key: "calculateShortestPath",
     value: function calculateShortestPath(current, target) {
       var area = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
 
@@ -777,6 +984,7 @@ var AStarSearch = exports.AStarSearch = function () {
       } else {
         this.area = this.simulation.area;
       }
+
       // The node we will start searching from
       var currentNode = {
         position: current,
@@ -794,14 +1002,13 @@ var AStarSearch = exports.AStarSearch = function () {
 
       // Will keep expanding nodes until the target is the best node, or all nodes have been expanded
       this._findBestPath();
-      //TODO this.activeNodes is blank at this point - why?
       // Constructs the path by tracing the previousNode pointers back to the start
-      this.path = [];
+      this.path.length = 0;
       this._constructPath(this.activeNodes.peek());
       return this.path;
     }
   }, {
-    key: '_findBestPath',
+    key: "_findBestPath",
     value: function _findBestPath() {
       // If the best node is not the target node, we continue searching
       var bestNode = this.activeNodes.peek();
@@ -812,7 +1019,7 @@ var AStarSearch = exports.AStarSearch = function () {
       }
     }
   }, {
-    key: '_exploreNode',
+    key: "_exploreNode",
     value: function _exploreNode(node) {
       // Remove this node from the list of active nodes
       this.activeNodes.pop();
@@ -851,7 +1058,7 @@ var AStarSearch = exports.AStarSearch = function () {
       this._findBestPath();
     }
   }, {
-    key: '_constructPath',
+    key: "_constructPath",
     value: function _constructPath(node) {
       // If node is undefined, there is no valid path to the target
       if (node !== undefined) {
@@ -862,6 +1069,8 @@ var AStarSearch = exports.AStarSearch = function () {
           }
           this._constructPath(node.previous);
         }
+      } else {
+        this.path = null;
       }
     }
 
@@ -872,7 +1081,7 @@ var AStarSearch = exports.AStarSearch = function () {
      */
 
   }, {
-    key: 'getValidNextEdgePositions',
+    key: "getValidNextEdgePositions",
     value: function getValidNextEdgePositions(position) {
       var edges = {
         elements: [this.area[position[0] - 1][position[1]], // North
@@ -885,7 +1094,7 @@ var AStarSearch = exports.AStarSearch = function () {
       var validEdges = [];
       for (var index = 0; index < edges.elements.length; index++) {
         // Valid edges are ground elements, the Actor's dispenser, the Actor's objective, or the Actor itself
-        if ((this.actor.config.ground.includes(edges.elements[index]) || (0, _actor.arraysEqual)(this.actor.dispenser, edges.positions[index]) || (0, _actor.arraysEqual)(this.actor.objective, edges.positions[index]) || edges.elements[index] === 'a') && !(0, _actor.arrayHolds)(this.checkedPositions, edges.positions[index])) {
+        if ((this.actor.config.ground.includes(edges.elements[index]) || (0, _actor.arraysEqual)(this.actor.dispenser, edges.positions[index]) || (0, _actor.arraysEqual)(this.actor.objective, edges.positions[index]) || (0, _actor.arraysEqual)(this.actor.position, edges.positions[index])) && !(0, _actor.arrayHolds)(this.checkedPositions, edges.positions[index]) && !(0, _actor.arrayHolds)(this.actor.blacklist, edges.positions[index])) {
           validEdges.push(edges.positions[index]);
         }
       }

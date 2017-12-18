@@ -42,6 +42,8 @@ export class AStarSearch {
     this.simulation = simulation;
     this.actor = actor;
     this.heuristic = heuristic;
+    this.path = [];
+    this.blacklistedNodes = [];
     // The position of the next objective
     // let objective = this.actor.objective;
     // while (objective !== undefined) {}
@@ -63,6 +65,7 @@ export class AStarSearch {
     } else {
       this.area = this.simulation.area;
     }
+
     // The node we will start searching from
     let currentNode = {
       position: current,
@@ -80,9 +83,8 @@ export class AStarSearch {
 
     // Will keep expanding nodes until the target is the best node, or all nodes have been expanded
     this._findBestPath();
-    //TODO this.activeNodes is blank at this point - why?
     // Constructs the path by tracing the previousNode pointers back to the start
-    this.path = [];
+    this.path.length = 0;
     this._constructPath(this.activeNodes.peek());
     return this.path;
   }
@@ -123,6 +125,8 @@ export class AStarSearch {
         }
         this._constructPath(node.previous);
       }
+    } else {
+      this.path = null;
     }
   }
 
@@ -153,8 +157,9 @@ export class AStarSearch {
         (this.actor.config.ground.includes(edges.elements[index]) ||
           arraysEqual(this.actor.dispenser, edges.positions[index]) ||
           arraysEqual(this.actor.objective, edges.positions[index]) ||
-          edges.elements[index] === 'a') &&
-        !arrayHolds(this.checkedPositions, edges.positions[index])
+          arraysEqual(this.actor.position, edges.positions[index])) &&
+        !arrayHolds(this.checkedPositions, edges.positions[index]) &&
+        !arrayHolds(this.actor.blacklist, edges.positions[index])
       ) {
         validEdges.push(edges.positions[index]);
       }
