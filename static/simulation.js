@@ -834,20 +834,40 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var terminalGui = exports.terminalGui = function () {
-
   /**
    * Loads the output textarea onto the page
    */
-  function terminalGui(rows, columns) {
+  function terminalGui(rows, columns, simulation) {
+    var _this = this;
+
     _classCallCheck(this, terminalGui);
 
-    var outputArea = document.getElementById('simulation');
-    this.output = document.createElement('textarea');
-    this.output.style.fontSize = '20px';
-    this.output.style.overflow = 'visible';
-    this.output.rows = rows * 2;
+    this.simulation = simulation;
+    var outputArea = document.getElementById("simulation");
+    var controls = document.createElement('div');
+    var display = document.createElement('div');
+    outputArea.appendChild(controls);
+    outputArea.appendChild(display);
+
+    this.tickTimeInput = document.createElement("textarea");
+    this.tickTimeInput.style.resize = "none";
+    this.tickTimeInput.value = 1000;
+    controls.appendChild(this.tickTimeInput);
+
+    this.activate = document.createElement("button");
+    this.activate.innerHTML = 'Activate simulation';
+    this.activate.addEventListener('click', function () {
+      _this.simulation.activateAll(_this.tickTimeInput.value);
+    });
+    controls.appendChild(this.activate);
+
+    this.output = document.createElement("textarea");
+    this.output.style.fontSize = "20px";
+    this.output.style.overflow = "visible";
+    this.output.rows = rows + 1;
     this.output.cols = columns * 2;
-    outputArea.appendChild(this.output);
+    this.output.style.resize = 'none';
+    display.appendChild(this.output);
   }
 
   /**
@@ -859,8 +879,8 @@ var terminalGui = exports.terminalGui = function () {
   _createClass(terminalGui, [{
     key: 'updateGui',
     value: function updateGui(area) {
-      this.output.value = '';
-      var display = '';
+      this.output.value = "";
+      var display = "";
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
       var _iteratorError = undefined;
@@ -869,7 +889,7 @@ var terminalGui = exports.terminalGui = function () {
         for (var _iterator = area[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
           var row = _step.value;
 
-          display = display.concat(row.toString().replace(/,/g, ' ') + '\n');
+          display = display.concat(row.toString().replace(/,/g, " ") + "\n");
         }
       } catch (err) {
         _didIteratorError = true;
@@ -1317,7 +1337,7 @@ var Simulation = exports.Simulation = function () {
     }
 
     // The gui we'll use to view the simulation
-    this.gui = new _terminalGui.terminalGui(this.area.length, this.area[0].length);
+    this.gui = new _terminalGui.terminalGui(this.area.length, this.area[0].length, this);
   }
 
   /**
@@ -1436,22 +1456,22 @@ var Simulation = exports.Simulation = function () {
     }
 
     /**
-     * Prints the simulation map (for a terminal game)
+     * Activates all Actors on the map
+     * @param {Integer} time The tick time in ms
      */
 
   }, {
-    key: 'print',
-    value: function print() {
-      var simulationArea = this.area;
+    key: 'activateAll',
+    value: function activateAll(time) {
       var _iteratorNormalCompletion5 = true;
       var _didIteratorError5 = false;
       var _iteratorError5 = undefined;
 
       try {
-        for (var _iterator5 = simulationArea[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-          var row = _step5.value;
+        for (var _iterator5 = this.actors[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+          var actor = _step5.value;
 
-          console.log(row);
+          actor.activate(time);
         }
       } catch (err) {
         _didIteratorError5 = true;
@@ -1464,6 +1484,40 @@ var Simulation = exports.Simulation = function () {
         } finally {
           if (_didIteratorError5) {
             throw _iteratorError5;
+          }
+        }
+      }
+    }
+
+    /**
+     * Prints the simulation map (for a terminal game)
+     */
+
+  }, {
+    key: 'print',
+    value: function print() {
+      var simulationArea = this.area;
+      var _iteratorNormalCompletion6 = true;
+      var _didIteratorError6 = false;
+      var _iteratorError6 = undefined;
+
+      try {
+        for (var _iterator6 = simulationArea[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+          var row = _step6.value;
+
+          console.log(row);
+        }
+      } catch (err) {
+        _didIteratorError6 = true;
+        _iteratorError6 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion6 && _iterator6.return) {
+            _iterator6.return();
+          }
+        } finally {
+          if (_didIteratorError6) {
+            throw _iteratorError6;
           }
         }
       }

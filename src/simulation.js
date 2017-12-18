@@ -77,7 +77,7 @@ export class Simulation {
     }
 
     // The gui we'll use to view the simulation
-    this.gui = new terminalGui(this.area.length, this.area[0].length);
+    this.gui = new terminalGui(this.area.length, this.area[0].length, this);
   }
 
   /**
@@ -152,6 +152,16 @@ export class Simulation {
         clearInterval(actor.interval);
         actor.activate(actor.time);
       }
+    }
+  }
+
+  /**
+   * Activates all Actors on the map
+   * @param {Integer} time The tick time in ms
+   */
+  activateAll(time) {
+    for (let actor of this.actors) {
+      actor.activate(time);
     }
   }
 

@@ -10,20 +10,40 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var terminalGui = exports.terminalGui = function () {
-
   /**
    * Loads the output textarea onto the page
    */
-  function terminalGui(rows, columns) {
+  function terminalGui(rows, columns, simulation) {
+    var _this = this;
+
     _classCallCheck(this, terminalGui);
 
-    var outputArea = document.getElementById('simulation');
-    this.output = document.createElement('textarea');
-    this.output.style.fontSize = '20px';
-    this.output.style.overflow = 'visible';
-    this.output.rows = rows * 2;
+    this.simulation = simulation;
+    var outputArea = document.getElementById("simulation");
+    var controls = document.createElement('div');
+    var display = document.createElement('div');
+    outputArea.appendChild(controls);
+    outputArea.appendChild(display);
+
+    this.tickTimeInput = document.createElement("textarea");
+    this.tickTimeInput.style.resize = "none";
+    this.tickTimeInput.value = 1000;
+    controls.appendChild(this.tickTimeInput);
+
+    this.activate = document.createElement("button");
+    this.activate.innerHTML = 'Activate simulation';
+    this.activate.addEventListener('click', function () {
+      _this.simulation.activateAll(_this.tickTimeInput.value);
+    });
+    controls.appendChild(this.activate);
+
+    this.output = document.createElement("textarea");
+    this.output.style.fontSize = "20px";
+    this.output.style.overflow = "visible";
+    this.output.rows = rows + 1;
     this.output.cols = columns * 2;
-    outputArea.appendChild(this.output);
+    this.output.style.resize = 'none';
+    display.appendChild(this.output);
   }
 
   /**
@@ -35,8 +55,8 @@ var terminalGui = exports.terminalGui = function () {
   _createClass(terminalGui, [{
     key: 'updateGui',
     value: function updateGui(area) {
-      this.output.value = '';
-      var display = '';
+      this.output.value = "";
+      var display = "";
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
       var _iteratorError = undefined;
@@ -45,7 +65,7 @@ var terminalGui = exports.terminalGui = function () {
         for (var _iterator = area[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
           var row = _step.value;
 
-          display = display.concat(row.toString().replace(/,/g, ' ') + '\n');
+          display = display.concat(row.toString().replace(/,/g, " ") + "\n");
         }
       } catch (err) {
         _didIteratorError = true;

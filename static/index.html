@@ -1,43 +1,80 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <html>
-  <head>
-    <style>
-      #header {
-        width: 100%;
-        height: auto;
-        border-bottom: 3px solid #222222;
-        padding-bottom: 3px;
-        margin-bottom: 5px;
-      }
-      #title {
-        font-size: 20px;
-      }
-      #subtitle {
-        font-size: 12px;
-      }
-      #credits {
-        font-size: 12px;
-        float: right;
-      }
-    </style>
-  </head>
 
-  <body>
-    <header id="header">
-      <span id="title">Swarm AI</span>
-      <span id="subtitle">Basic</span>
+<head>
+  <title>NJRBailey - Swarm AI - Basic</title>
+  <style>
+    #header {
+      width: 100%;
+      height: auto;
+      border-bottom: 3px solid #222222;
+      padding-bottom: 3px;
+      margin-bottom: 5px;
+    }
 
-      <span id="credits">
-        <a href="">NJRBailey</a>
-        <br>
-        2017-11-21
-      </span>
-    </header>
+    #title {
+      font-size: 20px;
+    }
 
+    #subtitle {
+      font-size: 12px;
+    }
+
+    #credits {
+      font-size: 12px;
+      float: right;
+    }
+
+    #content {
+      height: 100%;
+      display: flex;
+    }
+
+    #simulation {
+      flex: 6;
+      height: 100%;
+    }
+
+    #information {
+      flex: 4;
+      height: 100%;
+      border-left: 1px solid black;
+    }
+  </style>
+</head>
+
+<body>
+  <header id="header">
+    <span id="title">Swarm AI</span>
+    <span id="subtitle">Basic</span>
+
+    <span id="credits">
+      <a href="http://njrbailey.uk/">NJRBailey</a>
+      <br> 2017-11-21
+    </span>
+  </header>
+
+  <div id="content">
     <div id="simulation">
       <!-- Include the simulation class -->
       <script type="text/javascript" src="loader.js"></script>
     </div>
-  </body>
+    <div id="information">
+      <h2>
+        Information
+      </h2>
+      <p>
+        Basic version
+      </p>
+      <h2>
+        Rules
+      </h2>
+      <p>
+        Blah blah
+      </p>
+    </div>
+  </div>
+</body>
+
 </html>
