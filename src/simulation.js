@@ -78,6 +78,7 @@ export class Simulation {
 
     // The gui we'll use to view the simulation
     this.gui = new terminalGui(this.area.length, this.area[0].length, this);
+    this.gui.updateGui(this.area);
   }
 
   /**

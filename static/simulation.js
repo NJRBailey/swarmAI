@@ -1351,6 +1351,7 @@ var Simulation = exports.Simulation = function () {
 
     // The gui we'll use to view the simulation
     this.gui = new _terminalGui.terminalGui(this.area.length, this.area[0].length, this);
+    this.gui.updateGui(this.area);
   }
 
   /**
