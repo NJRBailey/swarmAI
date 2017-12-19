@@ -1,5 +1,5 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -20,30 +20,43 @@ var terminalGui = exports.terminalGui = function () {
 
     this.simulation = simulation;
     var outputArea = document.getElementById("simulation");
-    var controls = document.createElement('div');
-    var display = document.createElement('div');
+    var controls = document.createElement("div");
+    var display = document.createElement("div");
+    var keyArea = document.createElement("div");
+
     outputArea.appendChild(controls);
     outputArea.appendChild(display);
+    outputArea.appendChild(keyArea);
+
+    this.tickTimeLabel = document.createElement("label");
+    this.tickTimeLabel.innerHTML = "Tick time: ";
+    controls.appendChild(this.tickTimeLabel);
 
     this.tickTimeInput = document.createElement("textarea");
     this.tickTimeInput.style.resize = "none";
-    this.tickTimeInput.value = 1000;
+    this.tickTimeInput.value = 500;
+    this.tickTimeInput.rows = 1;
+    this.tickTimeInput.cols = 5;
     controls.appendChild(this.tickTimeInput);
 
     this.activate = document.createElement("button");
-    this.activate.innerHTML = 'Activate simulation';
-    this.activate.addEventListener('click', function () {
+    this.activate.innerHTML = "Activate simulation";
+    this.activate.addEventListener("click", function () {
       _this.simulation.activateAll(_this.tickTimeInput.value);
     });
     controls.appendChild(this.activate);
 
     this.output = document.createElement("textarea");
-    this.output.style.fontSize = "20px";
+    this.output.style.fontSize = "30px";
     this.output.style.overflow = "visible";
     this.output.rows = rows + 1;
     this.output.cols = columns * 2;
-    this.output.style.resize = 'none';
+    this.output.style.resize = "none";
     display.appendChild(this.output);
+
+    this.key = document.createElement("p");
+    this.key.innerHTML = "Key:<br>Ground Tiles: " + this.simulation.config.groundElements + "<br> Bots: A<br> Dispensers: " + this.simulation.config.itemElements + "<br> Objective Zones: " + this.simulation.config.objectiveElements;
+    keyArea.appendChild(this.key);
   }
 
   /**
@@ -53,7 +66,7 @@ var terminalGui = exports.terminalGui = function () {
 
 
   _createClass(terminalGui, [{
-    key: 'updateGui',
+    key: "updateGui",
     value: function updateGui(area) {
       this.output.value = "";
       var display = "";

@@ -3,6 +3,7 @@
 <html>
 
 <head>
+  <title>NJRBailey - Swarm AI - Basic</title>
   <style>
     #header {
       width: 100%;
@@ -25,16 +26,19 @@
       float: right;
     }
 
-    #simulation {
-      width: 59%;
+    #content {
       height: 100%;
-      float: left;
+      display: flex;
+    }
+
+    #simulation {
+      flex: 6;
+      height: 100%;
     }
 
     #information {
-      width: 40%;
+      flex: 4;
       height: 100%;
-      float: left;
       border-left: 1px solid black;
     }
   </style>
@@ -51,23 +55,82 @@
     </span>
   </header>
 
-  <div id="simulation">
-    <!-- Include the simulation class -->
-    <script type="text/javascript" src="loader.js"></script>
-  </div>
-  <div id="information">
-    <h2>
-      Information
-    </h2>
-    <p>
-      Basic version
-    </p>
-    <h2>
-      Rules
-    </h2>
-    <p>
-      Blah blah
-    </p>
+  <div id="content">
+    <div id="simulation">
+      <!-- Include the simulation class -->
+      <script type="text/javascript" src="loader.js"></script>
+    </div>
+    <div id="information">
+      <h2>
+        Information
+      </h2>
+      <p>
+        This is the most basic version of the Swarm AI project. It is the first version
+        to be published on the website. It has many restrictions, some of which will be
+        removed with subsequent basic versions (definitions of the different versions can
+        be found on the project page). The list of restrictions for this version can be
+        found in the Limitations section below.
+      </p>
+      <p>
+        Bots (A) have the task of picking up bricks (b) from brick dispensers (B) and placing
+        them at objective zones (O). The simulation ends once all objective zones have been filled.
+        Bots are assigned a priority to allow them to solve disputes - for example, if two bots are
+        going to crash into each other, the bot with the lower priority will calculate a new path which
+        avoids getting in the way of the bot with higher priority, which will continue on its original
+        path.
+      </p>
+      <p>
+        The 'tick time' refers to the number of milliseconds between each move.
+        For example, if the tick time is 1000, then a bot will move every 1000ms,
+        or in other words, it will move one position per second. Picking up or
+        placing bricks also takes one tick.
+      </p>
+      <h2>
+        Features
+      </h2>
+      <p>
+        <ul>
+          <li>Bots will not collide</li>
+          <li>Bots will not make the same section as another bot</li>
+          <li>Bots will stop once all sections have been built</li>
+        </ul>
+      </p>
+      <h2>
+        Limitations
+      </h2>
+      <p>
+        <ul>
+          <li>If a bot starts performing the same objective as another bot it will not
+            immediately realise. (Will be fixed in future basic version).
+          </li>
+          <li>If a bot knows it will collide with another bot, it will
+            currently completely recalculate a route to avoid the shared tile, even if waiting one tick
+            would solve the collision. This also means that a bot may take more moves than
+            necessary to get to its next position. This will be fixed in an advanced version.
+          </li>
+          <li>
+            Bots cannot deal with chokepoints (each objective needs to have x number
+            of paths leading to it for x number of bots) - in an advanced version they will be able to
+            back out of chokepoints to a 'safe' position to allow a higher-priority bot to pass before them.
+          </li>
+          <li>
+            Bots cannot travel over an objective zone to reach another objective zone. This
+            means that all objective zones must have at least one side next to a ground tile. This
+            will be fixed in a future basic version. This is a prerequisite to fixing the next limitation...
+          </li>
+          <li>
+            If an objective zone is surrounded by other objective zones, the bots will not
+            realise that the zone may become unreachable. This will be fixed in a future basic version.
+          </li>
+          <li>
+            Currently the objectives are sorted at the start, and are performed in that
+            order even if another objective is closer. This doesn't technically matter,
+            unless we get to the stage where an objective must be built to allow another
+            to be built (for example, a 3D structure would be built from the bottom up).
+          </li>
+        </ul>
+      </p>
+    </div>
   </div>
 </body>
 
